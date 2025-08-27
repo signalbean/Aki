@@ -1,7 +1,7 @@
 {
   "name": "aki",
   "description": "A Discord bot for fetching images from danbooru.",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "author": "signalbean",
   "license": "MIT",
   "type": "module",
