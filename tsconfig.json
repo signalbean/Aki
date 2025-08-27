@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
+    "noEmitOnError": true,
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "Node",
+    "baseUrl": "src",
+    "paths": {
+      "@commands/*": ["commands/*"],
+      "@core/*": ["core/*"],
+      "@handlers/*": ["handlers/*"],
+      "@scripts/*": ["scripts/*"],
+      "@services/*": ["services/*"],
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"]
+}

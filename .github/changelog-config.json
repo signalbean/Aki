@@ -1,0 +1,21 @@
+{
+  "categories": [
+    {
+      "title": "What's New",
+      "labels": ["feature", "enhancement"]
+    },
+    {
+      "title": "Fixes",
+      "labels": ["bug", "fix"]
+    },
+    {
+      "title": "Maintenance",
+      "labels": ["chore", "dependencies"]
+    },
+    {
+      "title": "Everything Else",
+      "labels": ["*"]
+    }
+  ],
+  "template": "## What's New\n$CHANGES\n\n## Contributors\n$CONTRIBUTORS\n\n**Full Changelog**: $COMPARE_URL"
+}

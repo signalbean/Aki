@@ -1,0 +1,60 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          configuration: ".github/changelog-config.json"
+
+      - name: Package repository
+        id: package
+        run: |
+          asset_name="${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
+          zip -r "${asset_name}" . -x ".*/*"
+          echo "path=${asset_name}" >> $GITHUB_OUTPUT
+
+      - name: Detect prerelease
+        id: prerelease
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            echo "state=true" >> $GITHUB_OUTPUT
+          else
+            echo "state=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compute make_latest flag
+        id: latest
+        run: |
+          if [[ "${{ steps.prerelease.outputs.state }}" == "true" ]]; then
+            echo "value=false" >> $GITHUB_OUTPUT
+          else
+            echo "value=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          allow_updates: true
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          make_latest: ${{ steps.latest.outputs.value }}
+          prerelease: ${{ steps.prerelease.outputs.state }}
+          files: ${{ steps.package.outputs.path }}

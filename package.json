@@ -1,0 +1,31 @@
+{
+  "name": "aki",
+  "description": "A Discord bot for fetching images from danbooru.",
+  "version": "0.0.0",
+  "author": "signalbean",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/core/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:me": "tsc && coffee-break",
+    "start": "node dist/core/index.js",
+    "dev": "ts-node src/core/index.ts",
+    "clean": "rm -rf dist/* && rm logs/*",
+    "clean:dist": "rm -rf dist/*",
+    "clean:logs": "rm logs/*",
+    "deploy": "node dist/scripts/manage-commands.js --g",
+    "deploy:guild": "node dist/scripts/manage-commands.js --id",
+    "delete": "node dist/scripts/manage-commands.js --dg",
+    "delete:guild": "node dist/scripts/manage-commands.js --did",
+    "delete:one": "node dist/scripts/manage-commands.js --cid"
+  },
+  "dependencies": {
+    "discord.js": "14.22.1",
+    "dotenv": "16.4.5"
+  },
+  "devDependencies": {
+    "ts-node": "10.9.2",
+    "typescript": "5.9.2"
+  }
+}

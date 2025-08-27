@@ -1,0 +1,2 @@
+character_1
+character_2(series_tag1)
