@@ -11,7 +11,7 @@ import { ValidationService } from '@services/ValidationService';
 import { MESSAGES } from '@shared/config';
 import { handleCommandError, logger, fileOps, paths, InteractionUtils } from '@shared/utils';
 
-let waifuTags: string[] = [];
+export let waifuTags: string[] = [];
 
 export async function initializeWaifus(): Promise<void> {
   try {
