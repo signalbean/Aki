@@ -24,29 +24,18 @@ jobs:
         with:
           configuration: ".github/changelog-config.json"
 
-      - name: Package repository
-        id: package
+      - name: Prepare assets and flags
+        id: prepare
         run: |
           asset_name="${{ github.event.repository.name }}-${{ github.ref_name }}.zip"
           zip -r "${asset_name}" . -x ".*/*"
-          echo "path=${asset_name}" >> $GITHUB_OUTPUT
-
-      - name: Detect prerelease
-        id: prerelease
-        run: |
-          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
-            echo "state=true" >> $GITHUB_OUTPUT
+          echo "asset_path=${asset_name}" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref_name }}" == *-* ]]; then
+            echo "prerelease_value=true" >> $GITHUB_OUTPUT
+            echo "make_latest_value=false" >> $GITHUB_OUTPUT
           else
-            echo "state=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Compute make_latest flag
-        id: latest
-        run: |
-          if [[ "${{ steps.prerelease.outputs.state }}" == "true" ]]; then
-            echo "value=false" >> $GITHUB_OUTPUT
-          else
-            echo "value=true" >> $GITHUB_OUTPUT
+            echo "prerelease_value=false" >> $GITHUB_OUTPUT
+            echo "make_latest_value=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Release
@@ -55,6 +44,6 @@ jobs:
           allow_updates: true
           name: Release ${{ github.ref_name }}
           body: ${{ steps.changelog.outputs.changelog }}
-          make_latest: ${{ steps.latest.outputs.value }}
-          prerelease: ${{ steps.prerelease.outputs.state }}
-          files: ${{ steps.package.outputs.path }}
+          make_latest: ${{ steps.prepare.outputs.make_latest_value }}
+          prerelease: ${{ steps.prepare.outputs.prerelease_value }}
+          files: ${{ steps.prepare.outputs.asset_path }}
