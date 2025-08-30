@@ -16,9 +16,9 @@ export const data = new ContextMenuCommandBuilder()
   .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM]);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction): Promise<void> {
-  const isValid = await InteractionUtils.validateContext(interaction, { 
+  const isValid = await InteractionUtils.validateContext(interaction, {
     requireGuild: false,
-    requireEphemeral: true 
+    requireEphemeral: true
   });
   if (!isValid) return;
 
@@ -35,12 +35,12 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     }
 
     if (!MessageUtils.canUserRemoveMessage(
-      messageData, 
-      interaction.user.id, 
+      messageData,
+      interaction.user.id,
       interaction.channel
     )) {
       return void await interaction.editReply({
-        content: `❌ Only the person who used the command to generate this message can remove it.`,
+        content: MESSAGES.ERROR.REMOVAL_DENIED,
       });
     }
 

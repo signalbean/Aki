@@ -4,7 +4,6 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   InteractionContextType,
-  MessageFlags,
   PermissionFlagsBits,
   AutocompleteInteraction,
 } from 'discord.js';
@@ -26,26 +25,15 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!InteractionUtils.checkGuildContext(interaction) || !interaction.memberPermissions) {
-    return void await interaction.reply({
-      content: MESSAGES.ERROR.GUILD_ONLY,
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
-  await InteractionUtils.deferEphemeral(interaction);
+  const isValid = await InteractionUtils.validateContext(interaction, {
+    requireGuild: true,
+    requireEphemeral: true,
+    requirePermissions: ['ManageMessages'],
+  });
+  if (!isValid) return;
 
   try {
     const name = interaction.options.getString('name', true).toLowerCase();
-
-    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
-      const errorEmbed = new CustomEmbed('error')
-        .withError('Permission Denied')
-        .setDescription('You need the "Manage Messages" permission to remove custom commands.')
-        .withStandardFooter(interaction.user);
-
-      return void await interaction.editReply({ embeds: [errorEmbed] });
-    }
 
     const existingTags = await CustomTagsService.getGuildTags(
       interaction.guild!.id,
@@ -60,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         .setDescription(`The command ${format.inlineCode('/' + name)} doesn't exist in this server.`)
         .addFields({
           name: '📋 Available Commands',
-          value: existingTags.length > 0 
+          value: existingTags.length > 0
             ? `Use ${format.inlineCode('/list')} to see all custom commands.`
             : 'No custom commands exist yet.'
         })
@@ -92,9 +80,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Removal Failed')
-        .setDescription('An error occurred while communicating with Discord. Please try again later.')
+        .setDescription(MESSAGES.ERROR.REMOVAL_FAILED)
         .withStandardFooter(interaction.user);
-      
+
       await interaction.editReply({ embeds: [errorEmbed] });
     }
   } catch (error) {

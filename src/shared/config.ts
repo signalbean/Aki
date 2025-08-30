@@ -59,6 +59,12 @@ export const MESSAGES = {
     ACCESS_DENIED: '❌ Access Denied. You do not have permission to use this command.',
     RATE_LIMIT: '⏱️ Too many requests. Please wait a moment and try again.',
     API_SERVER_ERROR: '❌ The API server is currently experiencing issues. Please try again later.',
+    REMOVAL_DENIED: '❌ Only the person who used the command to generate this message can remove it.',
+    MAX_TAGS_REACHED: `❌ This server has reached the maximum limit of ${CONFIG.BOT.MAX_CUSTOM_TAGS} custom commands. Please remove an existing command before adding a new one.`,
+    REGISTRATION_FAILED: 'Failed to register the command with Discord. Please try again later.',
+    REMOVAL_FAILED: 'An error occurred while communicating with Discord. Please try again later.',
+    INVALID_POST_ID: '⚠️ Please provide a valid numeric post ID.',
+    NO_IMAGE_IN_MESSAGE: '📷 No image found in this message.',
   },
   SUCCESS: {
     COMMAND_ADDED: 'Custom Command Added',
@@ -69,6 +75,9 @@ export const MESSAGES = {
     IMAGE_INFO: '📊 Image Information',
     TAGS_INFO: '🏷️ Tags Information',
   },
+  INTERACTION: {
+    NOT_FOR_YOU: '❌ This menu is not for you.',
+  }
 } as const;
 
 export const REGEX_PATTERNS = {
@@ -154,12 +163,12 @@ export const EmbedBuilders = {
     .withError('Guild Only')
     .setDescription(MESSAGES.ERROR.GUILD_ONLY)
     .withStandardFooter(user),
-    
+
   botMessagesOnlyError: (user: User) => new CustomEmbed('error')
     .withError('Access Denied')
     .setDescription(MESSAGES.ERROR.BOT_MESSAGES_ONLY)
     .withStandardFooter(user),
-    
+
   noImageFoundError: (user: User, context: 'message' | 'post' = 'message') => new CustomEmbed('warning')
     .withWarning(context === 'post' ? 'Post Not Found' : 'No Image Found')
     .setDescription(context === 'post' ? MESSAGES.ERROR.POST_NOT_FOUND : MESSAGES.ERROR.NO_IMAGE_CONTEXT)
