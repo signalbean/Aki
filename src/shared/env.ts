@@ -1,9 +1,42 @@
 // src/shared/env.ts
 
-import { config } from 'dotenv';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { logger } from '@shared/utils';
 
-config();
+/**
+ * Loads environment variables from a .env file into process.env.
+ * This function replicates the basic functionality of the `dotenv` package.
+ */
+function loadEnvFromFile(): void {
+  const envPath = resolve(process.cwd(), '.env');
+
+  try {
+    const fileContent = readFileSync(envPath, { encoding: 'utf-8' });
+    const lines = fileContent.split('\n');
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('#') || !trimmedLine.includes('=')) {
+        continue;
+      }
+
+      const [key, ...valueParts] = trimmedLine.split('=');
+      const value = valueParts.join('=').trim();
+
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+      }
+    }
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code !== 'ENOENT') {
+      logger.warn(`An error occurred while reading the .env file: ${nodeError.message}`);
+    }
+  }
+}
+
+loadEnvFromFile();
 
 const REQUIRED_ENV = ['TOKEN', 'CLIENT_ID'];
 

@@ -31,12 +31,12 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     }
 
     if (!MessageUtils.isBotMessage(message, interaction.client.user.id)) {
-      return void await interaction.editReply({ content: '⚠️ I can only save images that I have sent.' });
+      return void await interaction.editReply({ content: MESSAGES.ERROR.BOT_MESSAGES_ONLY });
     }
 
     const { url: imageUrl } = utils.findImageInMessage(message);
     if (!imageUrl) {
-      return void await interaction.editReply({ content: '📷 No image found in this message.' });
+      return void await interaction.editReply({ content: MESSAGES.ERROR.NO_IMAGE_IN_MESSAGE });
     }
 
     try {

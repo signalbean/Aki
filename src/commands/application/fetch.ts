@@ -48,7 +48,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     if (id && !ValidationService.isValidPostId(id)) {
       return void await interaction.editReply({
-        content: `⚠️ Please provide a valid numeric post ID.`,
+        content: MESSAGES.ERROR.INVALID_POST_ID,
       });
     }
 
@@ -80,7 +80,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
   try {
     const focusedOption = interaction.options.getFocused(true);
-    
+
     if (focusedOption.name !== 'search') {
       return void await interaction.respond([]);
     }
@@ -90,7 +90,7 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 
     const apiService = new ApiService();
     const suggestions = await apiService.Autocomplete(input);
-    
+
     const choices = suggestions.slice(0, 5).map(tag => ({
       name: `${tag.name} (${tag.post_count.toLocaleString()} posts)`,
       value: tag.name

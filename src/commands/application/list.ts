@@ -4,7 +4,6 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   InteractionContextType,
-  MessageFlags,
   ApplicationCommand,
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
@@ -18,14 +17,11 @@ export const data = new SlashCommandBuilder()
   .setContexts([InteractionContextType.Guild]);
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!InteractionUtils.checkGuildContext(interaction)) {
-    return void await interaction.reply({
-      content: MESSAGES.ERROR.GUILD_ONLY,
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
-  await InteractionUtils.deferEphemeral(interaction);
+  const isValid = await InteractionUtils.validateContext(interaction, {
+    requireGuild: true,
+    requireEphemeral: true,
+  });
+  if (!isValid) return;
 
   try {
     const tags: ApplicationCommand[] = await CustomTagsService.getGuildTags(
@@ -55,14 +51,14 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const groupedCommands = tags.reduce((acc, command) => {
       const actualTag = CustomTagsService.getTagFromCommand(command);
       const firstLetter = command.name[0].toUpperCase();
-      
+
       if (!acc[firstLetter]) acc[firstLetter] = [];
       acc[firstLetter].push({
         name: command.name,
         tag: actualTag || '???',
         description: command.description
       });
-      
+
       return acc;
     }, {} as Record<string, Array<{name: string, tag: string, description: string}>>);
 
@@ -76,10 +72,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     // Add fields for each letter group
     Object.keys(groupedCommands).sort().forEach(letter => {
       const commands = groupedCommands[letter];
-      const commandList = commands.map(cmd => 
+      const commandList = commands.map(cmd =>
         `${format.inlineCode('/' + cmd.name)} → ${format.inlineCode(cmd.tag)}`
       ).join('\n');
-      
+
       embed.addFields({
         name: `📁 ${letter.toUpperCase()}`,
         value: commandList,

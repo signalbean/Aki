@@ -1,2 +1,19 @@
-character_1
-character_2(series_tag1)
+# Waifu tags for random waifu command
+# One tag per line, lines starting with # are ignored
+
+1girl
+maid
+school_uniform
+long_hair
+short_hair
+blonde_hair
+brown_hair
+black_hair
+blue_eyes
+green_eyes
+brown_eyes
+smile
+happy
+kawaii
+bishoujo
+adorable

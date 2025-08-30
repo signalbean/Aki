@@ -5,7 +5,6 @@ import {
   ChatInputCommandInteraction,
   InteractionContextType,
   PermissionFlagsBits,
-  MessageFlags,
   AutocompleteInteraction,
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
@@ -38,14 +37,11 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!InteractionUtils.checkGuildContext(interaction)) {
-    return void await interaction.reply({
-      content: MESSAGES.ERROR.GUILD_ONLY,
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
-  await InteractionUtils.deferEphemeral(interaction);
+  const isValid = await InteractionUtils.validateContext(interaction, {
+    requireGuild: true,
+    requireEphemeral: true,
+  });
+  if (!isValid) return;
 
   try {
     const name = interaction.options.getString('name', true).toLowerCase().replace(/\s+/g, '_');
@@ -61,7 +57,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     if (!tagValidation.isValid) {
       return void await interaction.editReply({ content: tagValidation.error! });
     }
-    
+
     const existingTags = await CustomTagsService.getGuildTags(
       interaction.guild!.id,
       interaction.client.user.id,
@@ -70,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     if (existingTags.length >= CONFIG.BOT.MAX_CUSTOM_TAGS) {
       return void await interaction.editReply({
-        content: `❌ This server has reached the maximum limit of ${CONFIG.BOT.MAX_CUSTOM_TAGS} custom commands. Please remove an existing command before adding a new one.`,
+        content: MESSAGES.ERROR.MAX_TAGS_REACHED,
       });
     }
 
@@ -98,9 +94,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Registration Failed')
-        .setDescription('Failed to register the command with Discord. Please try again later.')
+        .setDescription(MESSAGES.ERROR.REGISTRATION_FAILED)
         .withStandardFooter(interaction.user);
-      
+
       await interaction.editReply({ embeds: [errorEmbed] });
     }
   } catch (error) {
@@ -111,7 +107,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
   try {
     const focusedOption = interaction.options.getFocused(true);
-    
+
     if (focusedOption.name !== 'tag') {
       return void await interaction.respond([]);
     }
@@ -121,7 +117,7 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
 
     const apiService = new ApiService();
     const suggestions = await apiService.Autocomplete(input);
-    
+
     const choices = suggestions.slice(0, 5).map(tag => ({
       name: `${tag.name}`,
       value: tag.name

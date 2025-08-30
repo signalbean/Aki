@@ -4,14 +4,13 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   InteractionContextType,
-  MessageFlags,
 } from 'discord.js';
 import { ApiService } from '@services/ApiService';
 import { ValidationService } from '@services/ValidationService';
 import { MESSAGES } from '@shared/config';
 import { handleCommandError, logger, fileOps, paths, InteractionUtils } from '@shared/utils';
 
-let waifuTags: string[] = [];
+export let waifuTags: string[] = [];
 
 export async function initializeWaifus(): Promise<void> {
   try {
@@ -42,14 +41,11 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!InteractionUtils.checkGuildContext(interaction)) {
-    return void await interaction.reply({
-      content: MESSAGES.ERROR.GUILD_ONLY,
-      flags: MessageFlags.Ephemeral,
-    });
-  }
-
-  await InteractionUtils.deferReply(interaction);
+  const isValid = await InteractionUtils.validateContext(interaction, {
+    requireGuild: true,
+    requireEphemeral: false,
+  });
+  if (!isValid) return;
 
   try {
     const rating = interaction.options.getString('rating') as 'q' | 's' | null;
@@ -74,7 +70,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const apiService = new ApiService();
     const post = await apiService.fetchRandomImage(searchTag, targetRating);
-    
+
     if (!post?.file_url) {
       return void await interaction.editReply({ content: MESSAGES.ERROR.NO_IMAGE });
     }

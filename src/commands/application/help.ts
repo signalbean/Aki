@@ -11,7 +11,7 @@ import {
   InteractionContextType,
   MessageFlags,
 } from 'discord.js';
-import { CONFIG, CustomEmbed, format } from '@shared/config';
+import { CONFIG, CustomEmbed, format, MESSAGES } from '@shared/config';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
 import { ChannelUtils } from '@services/ValidationService';
@@ -54,7 +54,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           ]) + '\n*Requires "Manage Messages" permission*'},
           { name: '❓ Utility', value: format.inlineCode('/help') + ' - Shows this help menu' }
         );
-    
+
     case 'custom_tags':
       return new CustomEmbed('info')
         .setTitle('🏷️ Custom Tag System')
@@ -75,8 +75,8 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
     case 'ratings':
       return new CustomEmbed('warning')
         .setTitle('🔒 Content Ratings & Safety')
-        .setDescription(isNSFW ? 
-          'This NSFW channel has access to all content ratings.' : 
+        .setDescription(isNSFW ?
+          'This NSFW channel has access to all content ratings.' :
           'This SFW channel is restricted to safe content only.')
         .addFields(
           { name: '🏷️ Rating Types', value: format.bullet([
@@ -85,7 +85,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
             `${format.bold('Questionable (q)')} - Borderline explicit content`,
             `${format.bold('Explicit (e)')} - Not safe for work`,
           ])},
-          { name: '🛡️ Channel Restrictions', value: isNSFW ? 
+          { name: '🛡️ Channel Restrictions', value: isNSFW ?
             'NSFW channels can access all rating types by adding `rating:` parameter to commands.' :
             'SFW channels automatically filter to safe content. Use NSFW channels for other ratings.'
           }
@@ -179,7 +179,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     collector.on('collect', async (i: StringSelectMenuInteraction) => {
       if (i.user.id !== interaction.user.id) {
-        return void await i.reply({ content: '❌ This menu is not for you.', flags: MessageFlags.Ephemeral });
+        return void await i.reply({ content: MESSAGES.INTERACTION.NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
       }
 
       const [value] = i.values;

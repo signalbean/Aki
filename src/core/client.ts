@@ -6,6 +6,7 @@ import {
   Interaction,
   Partials,
   Collection,
+  Message,
 } from 'discord.js';
 import { ApiService } from '@services/ApiService';
 import { CacheService } from '@services/CacheService';
@@ -64,7 +65,12 @@ export class BotClient {
 
   constructor() {
     this.client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages],
+      intents: [
+        GatewayIntentBits.Guilds, 
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+      ],
       partials: [Partials.Channel],
     });
   }
