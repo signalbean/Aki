@@ -21,8 +21,7 @@
     "delete:one": "node dist/scripts/manage-commands.js --cid"
   },
   "dependencies": {
-    "discord.js": "14.22.1",
-    "dotenv": "16.4.5"
+    "discord.js": "14.22.1"
   },
   "devDependencies": {
     "ts-node": "10.9.2",
