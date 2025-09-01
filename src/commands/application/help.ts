@@ -11,7 +11,8 @@ import {
   InteractionContextType,
   MessageFlags,
 } from 'discord.js';
-import { CONFIG, CustomEmbed, format, MESSAGES } from '@shared/config';
+import { CONFIG, CustomEmbed, format } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
 import { ChannelUtils } from '@services/ValidationService';
@@ -184,7 +185,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
       const [value] = i.values;
       const newEmbed = createEmbedForValue(value, isNSFW, interaction, customTags.length);
-      await i.update({ embeds: [newEmbed.withStandardFooter(interaction.user)], components: [selectMenu] });
+      await i.update({ embeds: [newEmbed.withStandardFooter(i.user)], components: [selectMenu] });
     });
 
     collector.on('end', async () => {

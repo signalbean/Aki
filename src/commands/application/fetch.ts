@@ -8,8 +8,9 @@ import {
 } from 'discord.js';
 import { ApiService } from '@services/ApiService';
 import { ValidationService } from '@services/ValidationService';
-import { MESSAGES } from '@shared/config';
 import { handleCommandError, InteractionUtils, logger } from '@shared/utils';
+import { CustomEmbed } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 
 export const data = new SlashCommandBuilder()
   .setName('fetch')
@@ -47,15 +48,19 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const rating = interaction.options.getString('rating') as 'q' | 's' | null;
 
     if (id && !ValidationService.isValidPostId(id)) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.INVALID_POST_ID,
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Invalid Post ID', MESSAGES.ERROR.INVALID_POST_ID)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     if (!id) {
       const tagValidation = ValidationService.validateTags(search || '');
       if (!tagValidation.isValid) {
-        return void await interaction.editReply({ content: tagValidation.error! });
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Invalid Tag', tagValidation.error)
+          .withStandardFooter(interaction.user);
+        return void await interaction.editReply({ embeds: [errorEmbed] });
       }
     }
 
@@ -64,11 +69,17 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     if (id) {
       const post = await apiService.fetchPostById(id);
       if (!post?.file_url) {
-        return void await interaction.editReply({ content: MESSAGES.ERROR.NO_IMAGE });
+        const errorEmbed = new CustomEmbed('error')
+          .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE)
+          .withStandardFooter(interaction.user);
+        return void await interaction.editReply({ embeds: [errorEmbed] });
       }
       const ratingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
       if (!ratingValidation.isValid) {
-        return void await interaction.editReply({ content: ratingValidation.error! });
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Content Restricted', ratingValidation.error)
+          .withStandardFooter(interaction.user);
+        return void await interaction.editReply({ embeds: [errorEmbed] });
       }
       return void await interaction.editReply({ content: post.file_url });
     }

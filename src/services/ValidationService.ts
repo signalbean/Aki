@@ -2,10 +2,11 @@
 
 import {
   BLACKLISTED_TAGS,
-  CONFIG, MESSAGES,
+  CONFIG,
   REGEX_PATTERNS,
   nsfwPatterns,
 } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { Channel, ChannelType } from 'discord.js';
 import { ValidationResult, ContentRating } from '@shared/types';
 
