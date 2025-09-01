@@ -6,9 +6,8 @@ import { logger } from '@shared/utils';
 
 /**
  * Loads environment variables from a .env file into process.env.
- * This function replicates the basic functionality of the `dotenv` package.
  */
-function loadEnvFromFile(): void {
+function loadEnv(): void {
   const envPath = resolve(process.cwd(), '.env');
 
   try {
@@ -36,7 +35,7 @@ function loadEnvFromFile(): void {
   }
 }
 
-loadEnvFromFile();
+loadEnv();
 
 const REQUIRED_ENV = ['TOKEN', 'CLIENT_ID'];
 

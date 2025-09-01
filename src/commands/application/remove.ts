@@ -9,7 +9,8 @@ import {
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils, logger } from '@shared/utils';
-import { CustomEmbed, format, MESSAGES } from '@shared/config';
+import { CustomEmbed, format } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { env } from '@shared/env';
 
 export const data = new SlashCommandBuilder()
@@ -44,8 +45,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const commandToRemove = existingTags.find(cmd => cmd.name === name);
     if (!commandToRemove) {
       const notFoundEmbed = new CustomEmbed('warning')
-        .withWarning('Command Not Found')
-        .setDescription(`The command ${format.inlineCode('/' + name)} doesn't exist in this server.`)
+        .withWarning('Command Not Found', `The command ${format.inlineCode('/' + name)} doesn't exist in this server.`)
         .addFields({
           name: '📋 Available Commands',
           value: existingTags.length > 0
@@ -79,8 +79,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       await interaction.editReply({ embeds: [successEmbed] });
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Removal Failed')
-        .setDescription(MESSAGES.ERROR.REMOVAL_FAILED)
+        .withError('Removal Failed', MESSAGES.ERROR.REMOVAL_FAILED)
         .withStandardFooter(interaction.user);
 
       await interaction.editReply({ embeds: [errorEmbed] });

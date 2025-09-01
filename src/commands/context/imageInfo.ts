@@ -7,7 +7,8 @@ import {
   InteractionContextType,
   PermissionFlagsBits,
 } from 'discord.js';
-import { MESSAGES, CONFIG, CustomEmbed, format, EmbedBuilders, UNKNOWN_ARTIST } from '@shared/config';
+import { CONFIG, CustomEmbed, format, EmbedBuilders, UNKNOWN_ARTIST } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { handleCommandError, InteractionUtils, utils } from '@shared/utils';
 import { ApiService } from '@services/ApiService';
 import { MessageUtils } from '@services/ValidationService';
@@ -27,7 +28,10 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     if (interaction.channel && 'permissionsFor' in interaction.channel && botMember) {
       const botPermissions = interaction.channel.permissionsFor(botMember);
       if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
-        return void await interaction.editReply({ content: MESSAGES.ERROR.MISSING_PERMISSIONS });
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Missing Permissions', MESSAGES.ERROR.MISSING_PERMISSIONS)
+          .withStandardFooter(interaction.user);
+        return void await interaction.editReply({ embeds: [errorEmbed] });
       }
     }
 

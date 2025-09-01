@@ -7,8 +7,9 @@ import {
 import { ApiService } from '@services/ApiService';
 import { ValidationService, ChannelUtils } from '@services/ValidationService';
 import { CustomTagsService } from '@services/CustomTagsService';
-import { MESSAGES } from '@shared/config';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
+import { CustomEmbed } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { ApiServerError } from '@shared/error';
 
 export async function handleCustomTag(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -20,16 +21,18 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
       ?? await interaction.guild!.commands.fetch(interaction.commandId);
 
     if (!command) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.COMMAND_NOT_FOUND,
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Command Not Found', MESSAGES.ERROR.COMMAND_NOT_FOUND)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const tagName = CustomTagsService.getTagFromCommand(command);
     if (!tagName) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.INVALID_CUSTOM_TAG,
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Invalid Custom Tag', MESSAGES.ERROR.INVALID_CUSTOM_TAG)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const requestedRating = interaction.options.getString('rating') as 'q' | 's' | null;
@@ -37,14 +40,18 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
 
     const ratingValidation = ValidationService.validateChannelRating(targetRating, interaction.channel);
     if (!ratingValidation.isValid) {
-      return void await interaction.editReply({ content: ratingValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Content Restricted', ratingValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const isSfwChannel = !ChannelUtils.isNSFWChannel(interaction.channel);
     if (isSfwChannel && !requestedRating && ValidationService.isPotentiallyNSFWTag(tagName)) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.NSFW_TAG_IN_SFW
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('NSFW Content', MESSAGES.ERROR.NSFW_TAG_IN_SFW)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const apiService = new ApiService();
@@ -54,24 +61,34 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
     } catch (error) {
       if (error instanceof ApiServerError) {
         if (error.status === 422 && isSfwChannel) {
-          return void await interaction.editReply({ content: MESSAGES.ERROR.NSFW_TAG_IN_SFW });
+          const errorEmbed = new CustomEmbed('error')
+            .withError('NSFW Content', MESSAGES.ERROR.NSFW_TAG_IN_SFW)
+            .withStandardFooter(interaction.user);
+          return void await interaction.editReply({ embeds: [errorEmbed] });
         }
         if (error.message.includes('Rate limit')) {
-          return void await interaction.editReply({ content: MESSAGES.ERROR.RATE_LIMIT });
+          const errorEmbed = new CustomEmbed('error')
+            .withError('Rate Limited', MESSAGES.ERROR.RATE_LIMIT)
+            .withStandardFooter(interaction.user);
+          return void await interaction.editReply({ embeds: [errorEmbed] });
         }
       }
       throw error;
     }
 
     if (!post?.file_url) {
-      return void await interaction.editReply({
-        content: `${MESSAGES.ERROR.NO_IMAGE}\n*Tag searched: \`${tagName}\`*`,
-      });
+      const errorEmbed = new CustomEmbed('warning')
+        .withWarning('No Image Found', `${MESSAGES.ERROR.NO_IMAGE}\n*Tag searched: \`${tagName}\`*`)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const finalRatingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
     if (!finalRatingValidation.isValid) {
-      return void await interaction.editReply({ content: finalRatingValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Content Restricted', finalRatingValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     await interaction.editReply({ content: post.file_url });

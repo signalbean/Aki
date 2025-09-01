@@ -7,9 +7,10 @@ import {
   InteractionContextType,
   PermissionFlagsBits,
 } from 'discord.js';
-import { MESSAGES } from '@shared/config';
 import { InteractionUtils, utils } from '@shared/utils';
 import { MessageUtils } from '@services/ValidationService';
+import { CustomEmbed } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 
 export const data = new ContextMenuCommandBuilder()
   .setName('Save Image')
@@ -26,28 +27,43 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     if (interaction.channel && 'permissionsFor' in interaction.channel && botMember) {
       const botPermissions = interaction.channel.permissionsFor(botMember);
       if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
-        return void await interaction.editReply({ content: MESSAGES.ERROR.MISSING_PERMISSIONS });
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
+          .withStandardFooter(interaction.user);
+        return void await interaction.editReply({ embeds: [errorEmbed] });
       }
     }
 
     if (!MessageUtils.isBotMessage(message, interaction.client.user.id)) {
-      return void await interaction.editReply({ content: MESSAGES.ERROR.BOT_MESSAGES_ONLY });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Access Denied', MESSAGES.ERROR.BOT_MESSAGES_ONLY)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const { url: imageUrl } = utils.findImageInMessage(message);
     if (!imageUrl) {
-      return void await interaction.editReply({ content: MESSAGES.ERROR.NO_IMAGE_IN_MESSAGE });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE_IN_MESSAGE)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     try {
       await interaction.user.send({ content: imageUrl });
       await interaction.deleteReply();
     } catch {
-      await interaction.editReply({ content: MESSAGES.ERROR.DM_FAILED });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('DM Failed', MESSAGES.ERROR.DM_FAILED)
+        .withStandardFooter(interaction.user);
+      await interaction.editReply({ embeds: [errorEmbed] });
     }
   } catch (error) {
     try {
-      await interaction.editReply({ content: MESSAGES.ERROR.GENERIC_ERROR });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
+        .withStandardFooter(interaction.user);
+      await interaction.editReply({ embeds: [errorEmbed] });
     } catch {
       // Ignore
     }

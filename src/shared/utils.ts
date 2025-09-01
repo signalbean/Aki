@@ -2,7 +2,8 @@ import { promises as fs, createWriteStream, existsSync, mkdirSync, WriteStream }
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { ChatInputCommandInteraction, MessageContextMenuCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import { MESSAGES, REGEX_PATTERNS } from '@shared/config';
+import { REGEX_PATTERNS, CustomEmbed, EmbedBuilders } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
@@ -155,18 +156,16 @@ export const InteractionUtils = {
     } = options;
 
     if (requireGuild && !this.checkGuildContext(interaction)) {
-      await interaction.reply({
-        content: MESSAGES.ERROR.GUILD_ONLY,
-        flags: MessageFlags.Ephemeral,
-      });
+      const errorEmbed = EmbedBuilders.guildOnlyError(interaction.user as any);
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       return false;
     }
 
     if (requirePermissions.length > 0 && !this.checkBotPermissions(interaction, requirePermissions)) {
-      await interaction.reply({
-        content: MESSAGES.ERROR.MISSING_PERMISSIONS,
-        flags: MessageFlags.Ephemeral,
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
+        .withStandardFooter(interaction.user as any);
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
       return false;
     }
 
@@ -217,25 +216,29 @@ export async function handleCommandError(
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   logger.error(`${commandName} command error: ${errorMessage}`);
 
-  // Check for specific API server errors and provide appropriate responses
-  let content: string = MESSAGES.ERROR.GENERIC_ERROR;
-  
+  let errorTitle: string = 'Unexpected Error';
+  let errorDescription: string = MESSAGES.ERROR.GENERIC_ERROR;
+
   if (errorMessage.includes('API server error (500)') || errorMessage.includes('server error')) {
-    content = MESSAGES.ERROR.API_SERVER_ERROR;
+    errorTitle = 'API Server Error';
+    errorDescription = MESSAGES.ERROR.API_SERVER_ERROR;
   } else if (errorMessage.includes('Rate limit') || errorMessage.includes('Too many requests')) {
-    content = MESSAGES.ERROR.RATE_LIMIT;
+    errorTitle = 'Rate Limited';
+    errorDescription = MESSAGES.ERROR.RATE_LIMIT;
   } else if (errorMessage.includes('Content not suitable for this channel')) {
-    content = MESSAGES.ERROR.NSFW_TAG_IN_SFW;
+    errorTitle = 'NSFW Content';
+    errorDescription = MESSAGES.ERROR.NSFW_TAG_IN_SFW;
   }
+  
+  const errorEmbed = new CustomEmbed('error')
+    .withError(errorTitle, errorDescription)
+    .withStandardFooter(interaction.user as any);
 
   try {
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content });
+      await interaction.editReply({ embeds: [errorEmbed] });
     } else {
-      await interaction.reply({
-        content,
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
     }
   } catch (replyError) {
     const replyErrorMessage = replyError instanceof Error ? replyError.message : 'Unknown reply error';

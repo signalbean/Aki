@@ -10,7 +10,8 @@ import {
 import { CustomTagsService } from '@services/CustomTagsService';
 import { ValidationService } from '@services/ValidationService';
 import { handleCommandError, InteractionUtils, logger } from '@shared/utils';
-import { CONFIG, CustomEmbed, format, MESSAGES } from '@shared/config';
+import { CONFIG, CustomEmbed, format } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { ApiService } from '@services/ApiService';
 import { env } from '@shared/env';
 
@@ -50,12 +51,18 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const nameValidation = CustomTagsService.validateTagName(name);
     if (!nameValidation.isValid) {
-      return void await interaction.editReply({ content: nameValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Invalid Command Name', nameValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const tagValidation = ValidationService.validateTags(tag);
     if (!tagValidation.isValid) {
-      return void await interaction.editReply({ content: tagValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Invalid Tag', tagValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const existingTags = await CustomTagsService.getGuildTags(
@@ -65,9 +72,10 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     );
 
     if (existingTags.length >= CONFIG.BOT.MAX_CUSTOM_TAGS) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.MAX_TAGS_REACHED,
-      });
+      const errorEmbed = new CustomEmbed('warning')
+        .withWarning('Server Limit Reached', MESSAGES.ERROR.MAX_TAGS_REACHED)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     try {
@@ -93,8 +101,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       await interaction.editReply({ embeds: [embed] });
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Registration Failed')
-        .setDescription(MESSAGES.ERROR.REGISTRATION_FAILED)
+        .withError('Registration Failed', MESSAGES.ERROR.REGISTRATION_FAILED)
         .withStandardFooter(interaction.user);
 
       await interaction.editReply({ embeds: [errorEmbed] });

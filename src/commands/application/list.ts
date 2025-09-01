@@ -8,7 +8,8 @@ import {
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
-import { CustomEmbed, format, CONFIG, MESSAGES } from '@shared/config';
+import { CustomEmbed, format, CONFIG } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 import { env } from '@shared/env';
 
 export const data = new SlashCommandBuilder()

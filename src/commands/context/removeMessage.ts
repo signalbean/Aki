@@ -6,9 +6,10 @@ import {
   MessageContextMenuCommandInteraction,
   InteractionContextType,
 } from 'discord.js';
-import { MESSAGES } from '@shared/config';
 import { InteractionUtils } from '@shared/utils';
 import { MessageUtils } from '@services/ValidationService';
+import { CustomEmbed } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 
 export const data = new ContextMenuCommandBuilder()
   .setName('Remove Message')
@@ -26,7 +27,10 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     const message = interaction.targetMessage;
 
     if (!MessageUtils.isBotMessage({ author: message.author }, interaction.client.user.id)) {
-      return void await interaction.editReply({ content: MESSAGES.ERROR.BOT_MESSAGES_ONLY });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Access Denied', MESSAGES.ERROR.BOT_MESSAGES_ONLY)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const messageData: { interactionMetadata?: { user: { id: string } } } = {};
@@ -39,16 +43,20 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       interaction.user.id,
       interaction.channel
     )) {
-      return void await interaction.editReply({
-        content: MESSAGES.ERROR.REMOVAL_DENIED,
-      });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Removal Denied', MESSAGES.ERROR.REMOVAL_DENIED)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     await message.delete();
     await interaction.deleteReply();
   } catch (error) {
     try {
-      await interaction.editReply({ content: MESSAGES.ERROR.GENERIC_ERROR });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
+        .withStandardFooter(interaction.user);
+      await interaction.editReply({ embeds: [errorEmbed] });
     } catch {
       // Ignore
     }

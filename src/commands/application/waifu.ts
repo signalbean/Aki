@@ -7,8 +7,9 @@ import {
 } from 'discord.js';
 import { ApiService } from '@services/ApiService';
 import { ValidationService } from '@services/ValidationService';
-import { MESSAGES } from '@shared/config';
 import { handleCommandError, logger, fileOps, paths, InteractionUtils } from '@shared/utils';
+import { CustomEmbed } from '@shared/config';
+import { MESSAGES } from '@shared/messages';
 
 export let waifuTags: string[] = [];
 
@@ -59,25 +60,37 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const tagValidation = ValidationService.validateTags(searchTag);
     if (!tagValidation.isValid) {
-      return void await interaction.editReply({ content: tagValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Invalid Tag', tagValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const targetRating = ValidationService.determineRating(rating, interaction.channel as any);
     const ratingValidation = ValidationService.validateChannelRating(targetRating, interaction.channel);
     if (!ratingValidation.isValid) {
-      return void await interaction.editReply({ content: ratingValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Content Restricted', ratingValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const apiService = new ApiService();
     const post = await apiService.fetchRandomImage(searchTag, targetRating);
 
     if (!post?.file_url) {
-      return void await interaction.editReply({ content: MESSAGES.ERROR.NO_IMAGE });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     const finalRatingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
     if (!finalRatingValidation.isValid) {
-      return void await interaction.editReply({ content: finalRatingValidation.error! });
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Content Restricted', finalRatingValidation.error)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     await interaction.editReply({ content: post.file_url });
