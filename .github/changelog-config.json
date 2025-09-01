@@ -1,4 +1,5 @@
 {
+  "template": "## What's New\n$CHANGES\n\n## Contributors\n$CONTRIBUTORS\n\n**Full Changelog**: $COMPARE_URL",
   "categories": [
     {
       "title": "What's New",
@@ -16,6 +17,5 @@
       "title": "Everything Else",
       "labels": ["*"]
     }
-  ],
-  "template": "## What's New\n$CHANGES\n\n## Contributors\n$CONTRIBUTORS\n\n**Full Changelog**: $COMPARE_URL"
+  ]
 }
