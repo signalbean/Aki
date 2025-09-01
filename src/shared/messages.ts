@@ -1,13 +1,11 @@
 // src/shared/messages.ts
 
-import { CONFIG } from '@shared/config';
-
 export const MESSAGES = {
   ERROR: {
     NO_IMAGE: 'No image found. The post might be gone or doesn\'t exist.',
     NO_IMAGE_CONTEXT: 'No image URL found in this message.',
     BLACKLISTED_TAG: 'Your search contains a blacklisted tag. Please try again.',
-    TOO_MANY_TAGS: `Maximum ${CONFIG.BOT.MAX_USER_TAGS} search tag allowed due to API limitations.`,
+    TOO_MANY_TAGS: `Maximum 1 search tag allowed due to API limitations.`,
     NSFW_IN_SFW: 'NSFW content can only be viewed in NSFW channels.',
     NSFW_TAG_IN_SFW: 'This command seems to be for NSFW content. To use it, you need to be in an NSFW channel.',
     DM_FAILED: `Failed to DM you.`,
@@ -23,7 +21,7 @@ export const MESSAGES = {
     RATE_LIMIT: 'Too many requests. Please wait a moment and try again.',
     API_SERVER_ERROR: 'The API server is currently experiencing issues. Please try again later.',
     REMOVAL_DENIED: 'Only the person who used the command to generate this message can remove it.',
-    MAX_TAGS_REACHED: `This server has reached the maximum limit of ${CONFIG.BOT.MAX_CUSTOM_TAGS} custom commands. Please remove an existing command before adding a new one.`,
+    MAX_TAGS_REACHED: `This server has reached the maximum limit of custom commands. Please remove an existing command before adding a new one.`,
     REGISTRATION_FAILED: 'Failed to register the command with Discord. Please try again later.',
     REMOVAL_FAILED: 'An error occurred while communicating with Discord. Please try again later.',
     INVALID_POST_ID: 'Please provide a valid numeric post ID.',
