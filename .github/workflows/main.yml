@@ -18,12 +18,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create changelog
-        id: changelog
-        uses: mikepenz/release-changelog-builder-action@v5
-        with:
-          configuration: ".github/changelog-config.json"
-
       - name: Prepare assets and flags
         id: prepare
         run: |
@@ -43,7 +37,7 @@ jobs:
         with:
           allow_updates: true
           name: Release ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          generate_release_notes: true
           make_latest: ${{ steps.prepare.outputs.make_latest_value }}
           prerelease: ${{ steps.prepare.outputs.prerelease_value }}
           files: ${{ steps.prepare.outputs.asset_path }}
