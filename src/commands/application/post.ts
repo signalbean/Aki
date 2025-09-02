@@ -10,17 +10,13 @@ import { CustomEmbed } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
 
 export const data = new SlashCommandBuilder()
-  .setName('fetch')
-  .setDescription('Fetch a random image from Danbooru')
+  .setName('post')
+  .setDescription('Fetch an image from Danbooru by post ID')
   .setContexts([InteractionContextType.Guild])
   .addStringOption(option =>
-    option.setName('rating')
-      .setDescription('Content rating')
-      .setRequired(false)
-      .addChoices(
-        { name: 'Questionable', value: 'q' },
-        { name: 'Sensitive', value: 's' }
-      )
+    option.setName('id')
+      .setDescription('Fetch by post ID')
+      .setRequired(true)
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -28,22 +24,18 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   if (!isValid) return;
 
   try {
-    const rating = interaction.options.getString('rating') as 'q' | 's' | null;
+    const id = interaction.options.getString('id', true);
 
     const apiService = new ApiService();
 
-    // Handle random image
-    const targetRating = ValidationService.determineRating(rating, interaction.channel as any);
-    const ratingValidation = ValidationService.validateChannelRating(targetRating, interaction.channel);
-    if (!ratingValidation.isValid) {
+    if (!ValidationService.isValidPostId(id)) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Content Restricted', ratingValidation.error)
+        .withError('Invalid Post ID', MESSAGES.ERROR.INVALID_POST_ID)
         .withStandardFooter(interaction.user);
       return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
-    const post = await apiService.fetchRandomImage('', targetRating);
-
+    const post = await apiService.fetchPostById(id);
     if (!post?.file_url) {
       const errorEmbed = new CustomEmbed('error')
         .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE)
@@ -51,16 +43,16 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
-    const finalRatingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
-    if (!finalRatingValidation.isValid) {
+    const ratingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
+    if (!ratingValidation.isValid) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Content Restricted', finalRatingValidation.error)
+        .withError('Content Restricted', ratingValidation.error)
         .withStandardFooter(interaction.user);
       return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
     await interaction.editReply({ content: post.file_url });
   } catch (error) {
-    await handleCommandError(interaction, 'fetch', error);
+    await handleCommandError(interaction, 'post', error);
   }
 }

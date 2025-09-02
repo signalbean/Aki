@@ -46,6 +46,16 @@ async function fetchWithTimeout(url: string): Promise<Response> {
       },
       signal: controller.signal,
     });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      if (error.message.includes('fetch failed')) {
+        throw new Error('Network connection failed');
+      }
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -101,6 +111,9 @@ export class ApiService {
           throw new ApiServerError(`API server error (${response.status})`, response.status);
         }
         if (response.status === 404) return null;
+        if (response.status === 503) {
+          throw new ApiServerError('Service temporarily unavailable', response.status);
+        }
         logger.warn(`API request failed with status ${response.status} for ID: ${id}`);
         return null;
       }
@@ -110,7 +123,13 @@ export class ApiService {
       return post;
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
-      logger.error(`Failed to fetch post ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
+        throw new ApiServerError('Connection timeout - please try again', 408);
+      }
+      
+      logger.error(`Failed to fetch post ${id}: ${errorMessage}`);
       return null;
     }
   }
@@ -129,6 +148,9 @@ export class ApiService {
         if (response.status >= 500) {
           throw new ApiServerError(`API server error (${response.status})`, response.status);
         }
+        if (response.status === 503) {
+          throw new ApiServerError('Service temporarily unavailable', response.status);
+        }
         if (response.status === 422) {
           throw new ApiServerError('Content not suitable for this channel', response.status);
         }
@@ -145,7 +167,13 @@ export class ApiService {
       return post;
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
-      logger.error(`Failed to fetch random image: ${error instanceof Error ? error.message : String(error)}`);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
+        throw new ApiServerError('Connection timeout - please try again', 408);
+      }
+      
+      logger.error(`Failed to fetch random image: ${errorMessage}`);
       return null;
     }
   }
@@ -164,6 +192,9 @@ export class ApiService {
       if (!response.ok) {
         if (response.status >= 500) {
           throw new ApiServerError(`Autocomplete API server error (${response.status})`, response.status);
+        }
+        if (response.status === 503) {
+          throw new ApiServerError('Autocomplete service temporarily unavailable', response.status);
         }
         logger.warn(`Tag autocomplete request failed with status ${response.status} for input: ${input}`);
         return [];
@@ -191,7 +222,13 @@ export class ApiService {
       return tags;
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
-      logger.error(`Failed to fetch tag autocomplete for "${input}": ${error instanceof Error ? error.message : String(error)}`);
+      
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
+        return [];
+      }
+      
+      logger.error(`Failed to fetch tag autocomplete for "${input}": ${errorMessage}`);
       return [];
     }
   }

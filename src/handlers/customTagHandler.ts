@@ -17,8 +17,17 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
   if (!isValid) return;
 
   try {
-    const command: ApplicationCommand | undefined = interaction.guild!.commands.cache.get(interaction.commandId)
-      ?? await interaction.guild!.commands.fetch(interaction.commandId);
+    let command: ApplicationCommand | undefined;
+    
+    try {
+      command = interaction.guild!.commands.cache.get(interaction.commandId) || 
+                await interaction.guild!.commands.fetch(interaction.commandId);
+    } catch (fetchError) {
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Command Not Found', MESSAGES.ERROR.COMMAND_NOT_FOUND)
+        .withStandardFooter(interaction.user);
+      return void await interaction.editReply({ embeds: [errorEmbed] });
+    }
 
     if (!command) {
       const errorEmbed = new CustomEmbed('error')
@@ -69,6 +78,12 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
         if (error.message.includes('Rate limit')) {
           const errorEmbed = new CustomEmbed('error')
             .withError('Rate Limited', MESSAGES.ERROR.RATE_LIMIT)
+            .withStandardFooter(interaction.user);
+          return void await interaction.editReply({ embeds: [errorEmbed] });
+        }
+        if (error.status >= 500) {
+          const errorEmbed = new CustomEmbed('error')
+            .withError('API Server Error', MESSAGES.ERROR.API_SERVER_ERROR)
             .withStandardFooter(interaction.user);
           return void await interaction.editReply({ embeds: [errorEmbed] });
         }

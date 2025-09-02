@@ -5,7 +5,7 @@ import {
   ChatInputCommandInteraction,
   InteractionContextType,
   PermissionFlagsBits,
-  AutocompleteInteraction,
+  AutocompleteInteraction
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { ValidationService } from '@services/ValidationService';
@@ -113,26 +113,49 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
 export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
   try {
+    if (!interaction.isAutocomplete()) {
+      return;
+    }
+
     const focusedOption = interaction.options.getFocused(true);
 
     if (focusedOption.name !== 'tag') {
-      return void await interaction.respond([]);
+      return void await interaction.respond([]).catch(() => {});
     }
 
     const input = focusedOption.value.toString().trim();
-    if (input.length === 0) return void await interaction.respond([]);
+    if (input.length === 0) {
+      return void await interaction.respond([]).catch(() => {});
+    }
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Autocomplete timeout')), 2000);
+    });
 
     const apiService = new ApiService();
-    const suggestions = await apiService.Autocomplete(input);
+    const suggestions = await Promise.race([
+      apiService.Autocomplete(input),
+      timeoutPromise
+    ]);
 
     const choices = suggestions.slice(0, 5).map(tag => ({
       name: `${tag.name}`,
       value: tag.name
     }));
 
+    if (interaction.responded || !interaction.isAutocomplete()) {
+      return;
+    }
+
     await interaction.respond(choices);
   } catch (error) {
-    logger.warn(`Autocomplete error for add command: ${error instanceof Error ? error.message : String(error)}`);
-    await interaction.respond([]).catch(() => {});
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('timeout')) {
+      logger.warn(`Autocomplete error for add command: ${errorMessage}`);
+    }
+    
+    if (!interaction.responded) {
+      await interaction.respond([]).catch(() => {});
+    }
   }
 }

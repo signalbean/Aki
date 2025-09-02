@@ -5,7 +5,7 @@ import {
   ChatInputCommandInteraction,
   InteractionContextType,
   PermissionFlagsBits,
-  AutocompleteInteraction,
+  AutocompleteInteraction
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils, logger } from '@shared/utils';
@@ -93,12 +93,24 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
   if (!interaction.guild) return;
 
   try {
+    if (!interaction.isAutocomplete()) {
+      return;
+    }
+
     const focusedValue = interaction.options.getFocused().toLowerCase();
-    const tags = await CustomTagsService.getGuildTags(
-      interaction.guild.id,
-      interaction.client.user.id,
-      env.TOKEN!
-    );
+    
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Autocomplete timeout')), 2000);
+    });
+
+    const tags = await Promise.race([
+      CustomTagsService.getGuildTags(
+        interaction.guild.id,
+        interaction.client.user.id,
+        env.TOKEN!
+      ),
+      timeoutPromise
+    ]);
 
     const filtered = tags
       .filter(tag => tag.name.toLowerCase().includes(focusedValue))
@@ -110,10 +122,19 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
         };
       })
       .slice(0, 25);
+    if (interaction.responded || !interaction.isAutocomplete()) {
+      return;
+    }
 
     await interaction.respond(filtered);
   } catch (error) {
-    logger.warn(`Autocomplete error for remove command: ${error instanceof Error ? error.message : String(error)}`);
-    await interaction.respond([]).catch(() => {});
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('timeout')) {
+      logger.warn(`Autocomplete error for remove command: ${errorMessage}`);
+    }
+    
+    if (!interaction.responded) {
+      await interaction.respond([]).catch(() => {});
+    }
   }
 }

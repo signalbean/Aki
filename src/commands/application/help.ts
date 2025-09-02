@@ -33,8 +33,8 @@ const createSelectMenu = () => new ActionRowBuilder<StringSelectMenuBuilder>()
         new StringSelectMenuOptionBuilder().setLabel('Custom Tags').setValue('custom_tags').setEmoji('🏷️'),
         new StringSelectMenuOptionBuilder().setLabel('Ratings & Safety').setValue('ratings').setEmoji('🔒'),
         new StringSelectMenuOptionBuilder().setLabel('Context Menus').setValue('context').setEmoji('🖱️'),
-        new StringSelectMenuOptionBuilder().setLabel('Bot Statistics').setValue('stats').setEmoji('📊'),
-        new StringSelectMenuOptionBuilder().setLabel('Usage Examples').setValue('examples').setEmoji('💡')
+        new StringSelectMenuOptionBuilder().setLabel('Usage Examples').setValue('examples').setEmoji('💡'),
+        new StringSelectMenuOptionBuilder().setLabel('Bot Statistics').setValue('stats').setEmoji('📊') // moved last
       )
   );
 
@@ -45,7 +45,9 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
         .setTitle('⚡ Available Commands')
         .addFields(
           { name: '🖼️ Image Commands', value: format.bullet([
-            `${format.inlineCode('/fetch')} - Search Danbooru with tags`,
+            `${format.inlineCode('/fetch')} - Fetches a random image (optionally filter by rating)`,
+            `${format.inlineCode('/search')} - Search Danbooru with tags`,
+            `${format.inlineCode('/post')} - Fetch a post by ID`,
             `${format.inlineCode('/waifu')} - Random waifu images`,
           ])},
           { name: '🏷️ Custom Tag Management', value: format.bullet([
@@ -68,7 +70,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           ])},
           { name: '🎯 Best Practices', value: format.bullet([
             'Use descriptive names for easy recognition',
-            'Test tags with `/fetch` first to verify results',
+            'Test tags with `/search` first to verify results',
             'Popular tags give better, more varied results',
           ])}
         );
@@ -107,6 +109,17 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           ])}
         );
 
+    case 'examples':
+      return new CustomEmbed('info')
+        .setTitle('💡 Usage Examples')
+        .addFields(
+          { name: '🎲 Random Fetch', value: format.codeBlock('/fetch rating:Sensitive') },
+          { name: '🔍 Search by Tag', value: format.codeBlock('/search search:cat_girl') },
+          { name: '🆔 By Post ID', value: format.codeBlock('/post id:1234567') },
+          { name: '🏷️ Creating Custom Command', value: format.codeBlock('/add name:foxgirl tag:fox_girl description:Cute fox girls') },
+          { name: '🎲 Random Waifu', value: format.codeBlock('/waifu rating:Sensitive') }
+        );
+
     case 'stats':
       return new CustomEmbed('info')
         .setTitle('📊 Bot Statistics')
@@ -119,19 +132,8 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           { name: '🌐 Network', value: format.bullet([
             `Servers: ${interaction.client.guilds.cache.size}`,
             `Users: ${interaction.client.users.cache.size.toLocaleString()}`,
-            `Commands: ${customTagCount + 10} total`,
+            `Commands: ${customTagCount + 11} total`,
           ]), inline: true },
-        );
-
-    case 'examples':
-      return new CustomEmbed('info')
-        .setTitle('💡 Usage Examples')
-        .addFields(
-          { name: '🔍 Basic Search', value: format.codeBlock('/fetch search:cat_girl') },
-          { name: '🎯 With Rating Filter', value: format.codeBlock('/fetch search:landscape rating:Sensitive') },
-          { name: '🆔 By Post ID', value: format.codeBlock('/fetch id:1234567') },
-          { name: '🏷️ Creating Custom Command', value: format.codeBlock('/add name:foxgirl tag:fox_girl description:Cute fox girls') },
-          { name: '🎲 Random Waifu', value: format.codeBlock('/waifu rating:Sensitive') }
         );
 
     default:
@@ -140,7 +142,6 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
 };
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  // Validation
   const isValid = await InteractionUtils.validateContext(interaction, { requireEphemeral: true });
   if (!isValid) return;
 
@@ -180,18 +181,31 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     collector.on('collect', async (i: StringSelectMenuInteraction) => {
       if (i.user.id !== interaction.user.id) {
-        return void await i.reply({ content: MESSAGES.INTERACTION.NOT_FOR_YOU, flags: MessageFlags.Ephemeral });
+        return void await i.reply({ 
+          content: MESSAGES.INTERACTION.NOT_FOR_YOU, 
+          flags: MessageFlags.Ephemeral 
+        }).catch(() => {});
       }
 
-      const [value] = i.values;
-      const newEmbed = createEmbedForValue(value, isNSFW, interaction, customTags.length);
-      await i.update({ embeds: [newEmbed.withStandardFooter(i.user)], components: [selectMenu] });
+      try {
+        const [value] = i.values;
+        const newEmbed = createEmbedForValue(value, isNSFW, interaction, customTags.length);
+        await i.update({ embeds: [newEmbed.withStandardFooter(i.user)], components: [selectMenu] });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (!errorMessage.includes('Unknown interaction')) {
+          throw error;
+        }
+      }
     });
 
     collector.on('end', async () => {
-      const disabledMenu = new ActionRowBuilder<StringSelectMenuBuilder>()
-        .addComponents(StringSelectMenuBuilder.from(selectMenu.components[0]).setDisabled(true));
-      await interaction.editReply({ components: [disabledMenu] });
+      try {
+        const disabledMenu = new ActionRowBuilder<StringSelectMenuBuilder>()
+          .addComponents(StringSelectMenuBuilder.from(selectMenu.components[0]).setDisabled(true));
+        await interaction.editReply({ components: [disabledMenu] });
+      } catch (error) {
+      }
     });
   } catch (error) {
     await handleCommandError(interaction, 'help', error);

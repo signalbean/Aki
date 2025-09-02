@@ -134,11 +134,22 @@ export const InteractionUtils = {
    * Common defer patterns
    */
   deferReply: async (interaction: InteractionType, ephemeral = false) => {
-    await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
+    if (interaction.deferred || interaction.replied) {
+      return;
+    }
+
+    try {
+      await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('Unknown interaction')) {
+        logger.warn(`Failed to defer reply: ${errorMessage}`);
+      }
+    }
   },
 
   deferEphemeral: async (interaction: InteractionType) => {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await InteractionUtils.deferReply(interaction, true);
   },
 
   /**
@@ -157,7 +168,10 @@ export const InteractionUtils = {
 
     if (requireGuild && !this.checkGuildContext(interaction)) {
       const errorEmbed = EmbedBuilders.guildOnlyError(interaction.user as any);
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      try {
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+      } catch {
+      }
       return false;
     }
 
@@ -165,7 +179,10 @@ export const InteractionUtils = {
       const errorEmbed = new CustomEmbed('error')
         .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
         .withStandardFooter(interaction.user as any);
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      try {
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+      } catch {
+      }
       return false;
     }
 
@@ -214,7 +231,10 @@ export async function handleCommandError(
   error?: unknown
 ): Promise<void> {
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-  logger.error(`${commandName} command error: ${errorMessage}`);
+  
+  if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('interaction has already been acknowledged')) {
+    logger.error(`${commandName} command error: ${errorMessage}`);
+  }
 
   let errorTitle: string = 'Unexpected Error';
   let errorDescription: string = MESSAGES.ERROR.GENERIC_ERROR;
@@ -238,7 +258,7 @@ export async function handleCommandError(
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ embeds: [errorEmbed] });
     } else {
-      await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
     }
   } catch (replyError) {
     const replyErrorMessage = replyError instanceof Error ? replyError.message : 'Unknown reply error';
