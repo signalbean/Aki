@@ -108,7 +108,7 @@ export async function autocomplete(interaction: AutocompleteInteraction): Promis
     ]);
 
     const choices = suggestions.slice(0, 5).map(tag => ({
-      name: `${tag.name} (${tag.post_count.toLocaleString()} posts)`,
+      name: `${tag.name}`,
       value: tag.name
     }));
 
