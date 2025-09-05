@@ -105,11 +105,6 @@ class CommandManager {
     }
 
     const commandData = allCommands.map(cmd => cmd.data.toJSON());
-    
-    console.log(`\n📊 Command Summary:`);
-    console.log(`   Application Commands: ${commands.application.length}`);
-    console.log(`   Context Menu Commands: ${commands.context.length}`);
-    console.log(`   Total Commands: ${allCommands.length}`);
 
     try {
       const route = guildId 
