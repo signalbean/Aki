@@ -14,7 +14,7 @@ import { ApiService } from '@services/ApiService';
 import { MessageUtils } from '@services/ValidationService';
 
 export const data = new ContextMenuCommandBuilder()
-  .setName('Image Info')
+  .setName('Info')
   .setType(ApplicationCommandType.Message)
   .setContexts([InteractionContextType.Guild]);
 

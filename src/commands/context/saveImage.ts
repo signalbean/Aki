@@ -13,7 +13,7 @@ import { CustomEmbed } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
 
 export const data = new ContextMenuCommandBuilder()
-  .setName('Save Image')
+  .setName('Save')
   .setType(ApplicationCommandType.Message)
   .setContexts([InteractionContextType.Guild]);
 

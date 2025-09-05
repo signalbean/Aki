@@ -12,7 +12,7 @@ import { ValidationService, MessageUtils } from '@services/ValidationService';
 import { ApiService } from '@services/ApiService';
 
 export const data = new ContextMenuCommandBuilder()
-  .setName('Show Tags')
+  .setName('Tags')
   .setType(ApplicationCommandType.Message)
   .setContexts([InteractionContextType.Guild]);
 

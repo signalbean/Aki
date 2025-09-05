@@ -12,9 +12,9 @@ import { CustomEmbed } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
 
 export const data = new ContextMenuCommandBuilder()
-  .setName('Remove Message')
+  .setName('Remove')
   .setType(ApplicationCommandType.Message)
-  .setContexts([InteractionContextType.Guild, InteractionContextType.BotDM]);
+  .setContexts([InteractionContextType.Guild]);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction): Promise<void> {
   const isValid = await InteractionUtils.validateContext(interaction, {
