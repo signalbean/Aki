@@ -89,8 +89,8 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
         {
           name: '🔗 Quick Actions',
           value: format.bullet([
-            'Right-click → "Show Tags" to see all tags',
-            'Right-click → "Save Image" to DM yourself',
+            'Right-click → "Tags" to see all tags',
+            'Right-click → "Save" to DM yourself',
             `Visit ${format.link('Danbooru Page', `${CONFIG.API.BASE_URL}/posts/${post.id}`)} for more details`
           ]),
           inline: false
@@ -100,6 +100,6 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    await handleCommandError(interaction, 'Image Info', error);
+    await handleCommandError(interaction, 'Info', error);
   }
 }

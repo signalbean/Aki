@@ -100,12 +100,12 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
         .setDescription('Right-click any bot image message to access these quick actions:')
         .addFields(
           { name: '📊 Information', value: format.bullet([
-            `${format.bold('Image Info')} - View post details and stats`,
-            `${format.bold('Show Tags')} - Display all image tags`,
+            `${format.bold('Info')} - View post details and stats`,
+            `${format.bold('Tags')} - Display all image tags`,
           ])},
           { name: '💾 Actions', value: format.bullet([
-            `${format.bold('Save Image')} - DM the image to yourself`,
-            `${format.bold('Remove Message')} - Delete the bot message`,
+            `${format.bold('Save')} - DM the image to yourself`,
+            `${format.bold('Remove')} - Delete the bot message`,
           ])}
         );
 
@@ -114,7 +114,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
         .setTitle('💡 Usage Examples')
         .addFields(
           { name: '🎲 Random Fetch', value: format.codeBlock('/fetch rating:Sensitive') },
-          { name: '🔍 Search by Tag', value: format.codeBlock('/search search:cat_girl') },
+          { name: '🔍 Search by Tag', value: format.codeBlock('/search tag:cat_girl') },
           { name: '🆔 By Post ID', value: format.codeBlock('/post id:1234567') },
           { name: '🏷️ Creating Custom Command', value: format.codeBlock('/add name:foxgirl tag:fox_girl description:Cute fox girls') },
           { name: '🎲 Random Waifu', value: format.codeBlock('/waifu rating:Sensitive') }
@@ -132,7 +132,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           { name: '🌐 Network', value: format.bullet([
             `Servers: ${interaction.client.guilds.cache.size}`,
             `Users: ${interaction.client.users.cache.size.toLocaleString()}`,
-            `Commands: ${customTagCount + 11} total`,
+            `Commands: ${customTagCount + 12} total`,
           ]), inline: true },
         );
 

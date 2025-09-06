@@ -118,7 +118,7 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       name: '💡 Pro Tips',
       value: format.bullet([
         'Use popular tags in your searches for better results',
-        `Try ${format.inlineCode('/fetch')} with any of these tags`,
+        `Try ${format.inlineCode('/search')} with any of these tags`,
         'Bold tags are highlighted (like the artist name)'
       ]),
       inline: false
@@ -126,6 +126,6 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
 
     await interaction.editReply({ embeds: [embed] });
   } catch (error) {
-    await handleCommandError(interaction, 'Show Tags', error);
+    await handleCommandError(interaction, 'Tags', error);
   }
 }
