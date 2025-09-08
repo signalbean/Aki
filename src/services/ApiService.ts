@@ -1,38 +1,38 @@
 // src/services/ApiService.ts
 
-import {
-  CONFIG,
-  BLACKLISTED_TAGS,
-  UNKNOWN_ARTIST,
-} from '@shared/config';
-import {
-  DanbooruPost,
-  ContentRating,
-  DanbooruTag,
-} from '@shared/types';
+import { CONFIG, BLACKLISTED_TAGS, UNKNOWN_ARTIST } from '@shared/config';
+import { DanbooruPost, ContentRating, DanbooruTag } from '@shared/types';
 import { ApiServerError } from '@shared/error';
 import { logger } from '@shared/utils';
 import { CacheService } from '@services/CacheService';
 
+// Rate limiter to prevent API abuse - tracks requests per minute window
 const rateLimiter = new Map<string, number>();
-const RATE_WINDOW = 60000;
-const MAX_REQUESTS = 30;
+const RATE_WINDOW = 60000; // 1 minute window
+const MAX_REQUESTS = 30; // Maximum requests per window
 
-function checkRateLimit(): boolean {
+const checkRateLimit = (): boolean => {
   const now = Date.now();
   const windowStart = Math.floor(now / RATE_WINDOW) * RATE_WINDOW;
-  const requests = rateLimiter.get(windowStart.toString()) || 0;
+  const key = windowStart.toString();
+  const requests = rateLimiter.get(key) || 0;
   
   if (requests >= MAX_REQUESTS) return false;
   
-  rateLimiter.set(windowStart.toString(), requests + 1);
-  for (const [key] of rateLimiter) {
-    if (parseInt(key) < now - RATE_WINDOW) rateLimiter.delete(key);
+  rateLimiter.set(key, requests + 1);
+  
+  // Cleanup old entries
+  for (const [k] of rateLimiter) {
+    if (parseInt(k) < now - RATE_WINDOW) rateLimiter.delete(k);
   }
   return true;
-}
+};
 
-async function fetchWithTimeout(url: string): Promise<Response> {
+/**
+ * Performs HTTP requests with built-in timeout and rate limiting.
+ * Includes proper error handling for network issues and timeouts.
+ */
+const fetchWithTimeout = async (url: string): Promise<Response> => {
   if (!checkRateLimit()) throw new Error('Rate limit exceeded. Please try again later.');
   
   const controller = new AbortController();
@@ -47,21 +47,20 @@ async function fetchWithTimeout(url: string): Promise<Response> {
       signal: controller.signal,
     });
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      if (error.message.includes('fetch failed')) {
-        throw new Error('Network connection failed');
-      }
-    }
+    const err = error as Error;
+    if (err.name === 'AbortError') throw new Error('Request timeout');
+    if (err.message.includes('fetch failed')) throw new Error('Network connection failed');
     throw error;
   } finally {
     clearTimeout(timeout);
   }
-}
+};
 
-function normalizePost(post: unknown): DanbooruPost | null {
+/**
+ * Normalizes and validates Danbooru post data from API responses.
+ * Filters out blacklisted content and ensures required fields are present.
+ */
+const normalizePost = (post: unknown): DanbooruPost | null => {
   if (!post || typeof post !== 'object') return null;
 
   const data = post as Record<string, unknown>;
@@ -81,9 +80,13 @@ function normalizePost(post: unknown): DanbooruPost | null {
     tag_string_artist: String(data.tag_string_artist) || UNKNOWN_ARTIST,
     fav_count: Number(data.fav_count) || 0,
   });
-}
+};
 
-function buildSearchParams(tags: string, rating: ContentRating): string {
+/**
+ * Constructs search parameters for Danbooru API requests.
+ * Applies content filters and rating restrictions automatically.
+ */
+const buildSearchParams = (tags: string, rating: ContentRating): string => {
   const baseFilter = `-status:deleted rating:${rating} filetype:png,jpg score:>50`;
   const cleanTags = tags ? tags.replace(/\s+/g, '_') : '';
   const searchTags = cleanTags ? ` ${cleanTags}` : '';
@@ -93,7 +96,7 @@ function buildSearchParams(tags: string, rating: ContentRating): string {
     random: 'true',
     tags: `${baseFilter}${searchTags}`,
   }).toString();
-}
+};
 
 export class ApiService {
   private readonly abortControllers = new Map<string, AbortController>();
@@ -124,7 +127,7 @@ export class ApiService {
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
       
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error as Error).message;
       if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
         throw new ApiServerError('Connection timeout - please try again', 408);
       }
@@ -168,7 +171,7 @@ export class ApiService {
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
       
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error as Error).message;
       if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
         throw new ApiServerError('Connection timeout - please try again', 408);
       }
@@ -178,7 +181,7 @@ export class ApiService {
     }
   }
 
-  async Autocomplete(input: string): Promise<DanbooruTag[]> {
+  async autocomplete(input: string): Promise<DanbooruTag[]> {
     const cleanInput = input.toLowerCase().trim().replace(/\s+/g, '_');
     if (!cleanInput || cleanInput.length < 1) return [];
     
@@ -223,7 +226,7 @@ export class ApiService {
     } catch (error) {
       if (error instanceof ApiServerError) throw error;
       
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error as Error).message;
       if (errorMessage.includes('timeout') || errorMessage.includes('Network connection failed')) {
         return [];
       }

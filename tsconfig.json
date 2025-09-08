@@ -18,6 +18,7 @@
     "moduleResolution": "Node",
     "baseUrl": "src",
     "paths": {
+      "@/*": ["./*"],
       "@commands/*": ["commands/*"],
       "@core/*": ["core/*"],
       "@handlers/*": ["handlers/*"],

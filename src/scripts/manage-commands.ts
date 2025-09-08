@@ -1,22 +1,12 @@
+// src/scripts/manage-commands.ts
+
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v10';
 import { readdir } from 'fs/promises';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 import { env } from '@shared/env';
-
-interface CommandData {
-  name: string;
-  id?: string;
-  type?: number;
-}
-
-interface LoadedCommand {
-  data: {
-    toJSON(): CommandData;
-  };
-  filePath: string;
-}
+import { CommandData, LoadedCommand } from '@shared/types';
 
 class CommandManager {
   private rest: REST;

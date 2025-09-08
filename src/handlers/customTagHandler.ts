@@ -5,7 +5,8 @@ import {
   ApplicationCommand,
 } from 'discord.js';
 import { ApiService } from '@services/ApiService';
-import { ValidationService, ChannelUtils } from '@services/ValidationService';
+import { ValidationService } from '@services/ValidationService';
+import { ChannelUtils } from '@shared/utils';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
 import { CustomEmbed } from '@shared/config';
@@ -55,7 +56,7 @@ export async function handleCustomTag(interaction: ChatInputCommandInteraction):
       return void await interaction.editReply({ embeds: [errorEmbed] });
     }
 
-    const isSfwChannel = !ChannelUtils.isNSFWChannel(interaction.channel);
+    const isSfwChannel = !ChannelUtils.isNSFW(interaction.channel);
     if (isSfwChannel && !requestedRating && ValidationService.isPotentiallyNSFWTag(tagName)) {
       const errorEmbed = new CustomEmbed('error')
         .withError('NSFW Content', MESSAGES.ERROR.NSFW_TAG_IN_SFW)

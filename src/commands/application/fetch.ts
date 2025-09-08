@@ -1,13 +1,11 @@
+// src/commands/application/fetch.ts
+
 import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
   InteractionContextType
 } from 'discord.js';
-import { ApiService } from '@services/ApiService';
-import { ValidationService } from '@services/ValidationService';
-import { handleCommandError, InteractionUtils } from '@shared/utils';
-import { CustomEmbed } from '@shared/config';
-import { MESSAGES } from '@shared/messages';
+import { executeImageCommand } from '@shared/command-base';
 
 export const data = new SlashCommandBuilder()
   .setName('fetch')
@@ -24,43 +22,6 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
-  const isValid = await InteractionUtils.validateContext(interaction, { requireEphemeral: false });
-  if (!isValid) return;
-
-  try {
-    const rating = interaction.options.getString('rating') as 'q' | 's' | null;
-
-    const apiService = new ApiService();
-
-    // Handle random image
-    const targetRating = ValidationService.determineRating(rating, interaction.channel as any);
-    const ratingValidation = ValidationService.validateChannelRating(targetRating, interaction.channel);
-    if (!ratingValidation.isValid) {
-      const errorEmbed = new CustomEmbed('error')
-        .withError('Content Restricted', ratingValidation.error)
-        .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
-    }
-
-    const post = await apiService.fetchRandomImage('', targetRating);
-
-    if (!post?.file_url) {
-      const errorEmbed = new CustomEmbed('error')
-        .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE)
-        .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
-    }
-
-    const finalRatingValidation = ValidationService.validateChannelRating(post.rating, interaction.channel);
-    if (!finalRatingValidation.isValid) {
-      const errorEmbed = new CustomEmbed('error')
-        .withError('Content Restricted', finalRatingValidation.error)
-        .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
-    }
-
-    await interaction.editReply({ content: post.file_url });
-  } catch (error) {
-    await handleCommandError(interaction, 'fetch', error);
-  }
+  const rating = interaction.options.getString('rating') as 'q' | 's' | null;
+  await executeImageCommand(interaction, 'fetch', '', rating);
 }

@@ -2,8 +2,12 @@
 
 import { EmbedBuilder, User } from 'discord.js';
 import { MESSAGES } from '@shared/messages';
+import { EmbedType } from '@shared/types';
 
-// Configuration constants
+/**
+ * Central configuration object containing all bot settings, API endpoints,
+ * timeouts, limits, and other configurable values.
+ */
 export const CONFIG = {
   API: {
     BASE_URL: 'https://danbooru.donmai.us',
@@ -32,6 +36,7 @@ export const CONFIG = {
   },
 } as const;
 
+// Content filter: Tags that are completely blocked from all searches and results
 export const BLACKLISTED_TAGS = new Set([
   'loli', 'shota', 'lolicon', 'shotacon', 'underage', 'child', 'minor', 'kid', 'baby', 'toddler', 'child_porn', 'cp',
   'gore', 'guro', 'snuff', 'death', 'murder', 'torture', 'blood', 'violence', 'rape_gore', 'cannibalism', 'necrophilia',
@@ -39,8 +44,10 @@ export const BLACKLISTED_TAGS = new Set([
   'scat', 'poop', 'defecation', 'urine', 'watersports', 'piss', 'toilet', 'diaper'
 ]);
 
+// Regex patterns to detect potentially NSFW tags for SFW channel warnings
 export const nsfwPatterns = [/nude/, /sex/, /porn/, /hentai/, /ecchi/, /bikini/, /underwear/, /suggestive/, /erotic/, /nsfw/];
 
+// Regular expressions for validating user input and parsing content
 export const REGEX_PATTERNS = {
   VALID_POST_ID: /^\d+$/,
   VALID_TAG_NAME: /^[a-z0-9_:]{1,64}$/,
@@ -48,11 +55,14 @@ export const REGEX_PATTERNS = {
   ID_FROM_URL: /\?id=(\d+)/,
 } as const;
 
+// Command names that cannot be used for custom tag commands
 export const RESERVED_COMMAND_NAMES = new Set(['fetch', 'help', 'add', 'list', 'remove', 'waifu']);
+// Prefix used to identify custom tag commands in their descriptions
 export const TAG_PREFIX = 'Tag:';
+// Fallback text when artist information is not available
 export const UNKNOWN_ARTIST = 'Unknown';
 
-// Embed helper
+// Color scheme for Discord embeds based on message type
 const COLORS = {
   PRIMARY: 0xe40206,
   SUCCESS: 0x00ff88,
@@ -60,8 +70,6 @@ const COLORS = {
   ERROR: 0xff4444,
   INFO: 0x5865f2,
 } as const;
-
-type EmbedType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
 export class CustomEmbed extends EmbedBuilder {
   constructor(type: EmbedType = 'default') {
@@ -120,7 +128,7 @@ export const format = {
   link: (label: string, url: string) => `[${label}](${url})`,
 } as const;
 
-// Common embed builders
+// Pre-built embed templates for common error scenarios
 export const EmbedBuilders = {
   guildOnlyError: (user: User) => new CustomEmbed('error')
     .withError('Guild Only', MESSAGES.ERROR.GUILD_ONLY)
