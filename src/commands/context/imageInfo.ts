@@ -5,13 +5,12 @@ import {
   ApplicationCommandType,
   MessageContextMenuCommandInteraction,
   InteractionContextType,
-  PermissionFlagsBits,
 } from 'discord.js';
 import { CONFIG, CustomEmbed, format, EmbedBuilders, UNKNOWN_ARTIST } from '@shared/config';
-import { MESSAGES } from '@shared/messages';
 import { handleCommandError, InteractionUtils, utils } from '@shared/utils';
 import { ApiService } from '@services/ApiService';
 import { MessageUtils } from '@services/ValidationService';
+import { DanbooruPost } from '@shared/types';
 
 export const data = new ContextMenuCommandBuilder()
   .setName('Info')
@@ -19,41 +18,51 @@ export const data = new ContextMenuCommandBuilder()
   .setContexts([InteractionContextType.Guild]);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction): Promise<void> {
-  await InteractionUtils.deferReply(interaction, true);
+  const isValid = await InteractionUtils.validateContext(interaction, { 
+    requireGuild: true, 
+    requireEphemeral: true 
+  });
+  if (!isValid) return;
 
   try {
     const message = interaction.targetMessage;
-    const botMember = interaction.guild?.members.me;
-
-    if (interaction.channel && 'permissionsFor' in interaction.channel && botMember) {
-      const botPermissions = interaction.channel.permissionsFor(botMember);
-      if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
-        const errorEmbed = new CustomEmbed('error')
-          .withError('Missing Permissions', MESSAGES.ERROR.MISSING_PERMISSIONS)
-          .withStandardFooter(interaction.user);
-        return void await interaction.editReply({ embeds: [errorEmbed] });
-      }
-    }
 
     if (!MessageUtils.isBotMessage(message, interaction.client.user.id)) {
-      return void await interaction.editReply({ 
+      await InteractionUtils.safeReply(interaction, { 
         embeds: [EmbedBuilders.botMessagesOnlyError(interaction.user)] 
       });
+      return;
     }
 
     const { id } = utils.findImageInMessage(message);
     if (!id) {
-      return void await interaction.editReply({ 
+      await InteractionUtils.safeReply(interaction, { 
         embeds: [EmbedBuilders.noImageFoundError(interaction.user, 'message')] 
       });
+      return;
     }
 
     const apiService = new ApiService();
-    const post = await apiService.fetchPostById(id);
-    if (!post) {
-      return void await interaction.editReply({ 
+    let post: DanbooruPost | null = null;
+    try {
+      post = await Promise.race([
+        apiService.fetchPostById(id),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('API request timeout')), 8000)
+        )
+      ]);
+    } catch (error) {
+      await InteractionUtils.safeReply(interaction, { 
         embeds: [EmbedBuilders.noImageFoundError(interaction.user, 'post')] 
       });
+      return;
+    }
+
+    if (!post) {
+      await InteractionUtils.safeReply(interaction, { 
+        embeds: [EmbedBuilders.noImageFoundError(interaction.user, 'post')] 
+      });
+      return;
     }
 
     const ratingEmojis = { g: '✅', s: '⚠️', q: '🔶', e: '🔞' };
@@ -98,7 +107,7 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       )
       .withStandardFooter(interaction.user);
 
-    await interaction.editReply({ embeds: [embed] });
+    await InteractionUtils.safeReply(interaction, { embeds: [embed] });
   } catch (error) {
     await handleCommandError(interaction, 'Info', error);
   }

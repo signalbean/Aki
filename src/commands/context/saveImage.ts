@@ -18,27 +18,21 @@ export const data = new ContextMenuCommandBuilder()
   .setContexts([InteractionContextType.Guild]);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction): Promise<void> {
-  await InteractionUtils.deferReply(interaction, true);
+  const isValid = await InteractionUtils.validateContext(interaction, { 
+    requireGuild: true, 
+    requireEphemeral: true 
+  });
+  if (!isValid) return;
 
   try {
     const message = interaction.targetMessage;
-    const botMember = interaction.guild?.members.me;
-
-    if (interaction.channel && 'permissionsFor' in interaction.channel && botMember) {
-      const botPermissions = interaction.channel.permissionsFor(botMember);
-      if (!botPermissions?.has(PermissionFlagsBits.ViewChannel)) {
-        const errorEmbed = new CustomEmbed('error')
-          .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
-          .withStandardFooter(interaction.user);
-        return void await interaction.editReply({ embeds: [errorEmbed] });
-      }
-    }
 
     if (!MessageUtils.isBotMessage(message, interaction.client.user.id)) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Access Denied', MESSAGES.ERROR.BOT_MESSAGES_ONLY)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     const { url: imageUrl } = utils.findImageInMessage(message);
@@ -46,7 +40,8 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const errorEmbed = new CustomEmbed('error')
         .withError('No Image Found', MESSAGES.ERROR.NO_IMAGE_IN_MESSAGE)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     try {
@@ -56,14 +51,14 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const errorEmbed = new CustomEmbed('error')
         .withError('DM Failed', MESSAGES.ERROR.DM_FAILED)
         .withStandardFooter(interaction.user);
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
     }
   } catch (error) {
     try {
       const errorEmbed = new CustomEmbed('error')
         .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
         .withStandardFooter(interaction.user);
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
     } catch {
       // Ignore
     }

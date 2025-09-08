@@ -28,7 +28,6 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   const isValid = await InteractionUtils.validateContext(interaction, {
     requireGuild: true,
     requireEphemeral: true,
-    requirePermissions: ['ManageMessages'],
   });
   if (!isValid) return;
 
@@ -53,7 +52,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         })
         .withStandardFooter(interaction.user);
 
-      return void await interaction.editReply({ embeds: [notFoundEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [notFoundEmbed] });
+      return;
     }
 
     try {
@@ -75,13 +75,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         )
         .withStandardFooter(interaction.user);
 
-      await interaction.editReply({ embeds: [successEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [successEmbed] });
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Removal Failed', MESSAGES.ERROR.REMOVAL_FAILED)
         .withStandardFooter(interaction.user);
 
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
     }
   } catch (error) {
     await handleCommandError(interaction, 'remove', error);

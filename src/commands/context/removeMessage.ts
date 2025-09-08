@@ -30,7 +30,8 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const errorEmbed = new CustomEmbed('error')
         .withError('Access Denied', MESSAGES.ERROR.BOT_MESSAGES_ONLY)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     const messageData: { interactionMetadata?: { user: { id: string } } } = {};
@@ -46,7 +47,8 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const errorEmbed = new CustomEmbed('error')
         .withError('Removal Denied', MESSAGES.ERROR.REMOVAL_DENIED)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     await message.delete();
@@ -56,7 +58,7 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       const errorEmbed = new CustomEmbed('error')
         .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
         .withStandardFooter(interaction.user);
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
     } catch {
       // Ignore
     }

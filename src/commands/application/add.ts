@@ -52,7 +52,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       const errorEmbed = new CustomEmbed('error')
         .withError('Invalid Command Name', nameValidation.error)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     const tagValidation = ValidationService.validateTags(tag);
@@ -60,7 +61,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       const errorEmbed = new CustomEmbed('error')
         .withError('Invalid Tag', tagValidation.error)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     const existingTags = await CustomTagsService.getGuildTags(
@@ -73,7 +75,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       const errorEmbed = new CustomEmbed('warning')
         .withWarning('Server Limit Reached', MESSAGES.ERROR.MAX_TAGS_REACHED)
         .withStandardFooter(interaction.user);
-      return void await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
     }
 
     try {
@@ -96,13 +99,13 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         )
         .withStandardFooter(interaction.user);
 
-      await interaction.editReply({ embeds: [embed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [embed] });
     } catch (deployError) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Registration Failed', MESSAGES.ERROR.REGISTRATION_FAILED)
         .withStandardFooter(interaction.user);
 
-      await interaction.editReply({ embeds: [errorEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
     }
   } catch (error) {
     await handleCommandError(interaction, 'add', error);

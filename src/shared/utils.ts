@@ -4,8 +4,6 @@ import { promises as fs, createWriteStream, existsSync, mkdirSync, WriteStream }
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { 
-  ChatInputCommandInteraction, 
-  MessageContextMenuCommandInteraction, 
   MessageFlags, 
   PermissionFlagsBits,
   Channel,
@@ -132,16 +130,61 @@ export const InteractionUtils = Object.freeze({
     return permissions.every(permission => botPermissions?.has(PermissionFlagsBits[permission]));
   },
 
-  async deferReply(interaction: InteractionType, ephemeral = false): Promise<void> {
-    if (interaction.deferred || interaction.replied) return;
+  checkUserPermissions: (
+    interaction: InteractionType,
+    permissions: (keyof typeof PermissionFlagsBits)[]
+  ): boolean => {
+    if (!interaction.guild || !interaction.member || !interaction.channel || !('permissionsFor' in interaction.channel)) {
+      return false;
+    }
+    const userPermissions = interaction.channel.permissionsFor(interaction.member as any);
+    return permissions.every(permission => userPermissions?.has(PermissionFlagsBits[permission]));
+  },
+
+  async safeReply(
+    interaction: InteractionType, 
+    content: any, 
+    ephemeral = false
+  ): Promise<boolean> {
+    try {
+      const options = {
+        ...content,
+        flags: ephemeral ? MessageFlags.Ephemeral : undefined
+      };
+
+      if (interaction.deferred) {
+        await interaction.editReply(content);
+      } else if (interaction.replied) {
+        await interaction.followUp(options);
+      } else {
+        await interaction.reply(options);
+      }
+      return true;
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      if (!errorMessage.includes('Unknown interaction') && 
+          !errorMessage.includes('interaction has already been acknowledged')) {
+        logger.warn(`Failed to send reply: ${errorMessage}`);
+      }
+      return false;
+    }
+  },
+
+  async deferReply(interaction: InteractionType, ephemeral = false): Promise<boolean> {
+    if (interaction.deferred || interaction.replied) return true;
     
     try {
-      await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
+      await Promise.race([
+        interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : undefined }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Defer timeout')), 2500))
+      ]);
+      return true;
     } catch (error) {
       const errorMessage = (error as Error).message;
       if (!errorMessage.includes('Unknown interaction')) {
         logger.warn(`Failed to defer reply: ${errorMessage}`);
       }
+      return false;
     }
   },
 
@@ -149,31 +192,49 @@ export const InteractionUtils = Object.freeze({
     interaction: InteractionType, 
     options: {
       requireGuild?: boolean;
-      requirePermissions?: (keyof typeof PermissionFlagsBits)[];
+      requireBotPermissions?: (keyof typeof PermissionFlagsBits)[];
+      requireUserPermissions?: (keyof typeof PermissionFlagsBits)[];
       requireEphemeral?: boolean;
     } = {}
   ): Promise<boolean> {
-    const { requireGuild = true, requirePermissions = ['ViewChannel'], requireEphemeral = false } = options;
+    const { 
+      requireGuild = true, 
+      requireBotPermissions = ['ViewChannel'], 
+      requireUserPermissions = [],
+      requireEphemeral = false 
+    } = options;
 
+    // Check guild context first
     if (requireGuild && !this.checkGuildContext(interaction)) {
       const errorEmbed = EmbedBuilders.guildOnlyError(interaction.user);
-      try {
-        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-      } catch {}
+      await this.safeReply(interaction, { embeds: [errorEmbed] }, true);
       return false;
     }
 
-    if (requirePermissions.length > 0 && !this.checkBotPermissions(interaction, requirePermissions)) {
+    // Check bot permissions
+    if (requireBotPermissions.length > 0 && !this.checkBotPermissions(interaction, requireBotPermissions)) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
+        .withError('Missing Bot Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
         .withStandardFooter(interaction.user);
-      try {
-        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-      } catch {}
+      await this.safeReply(interaction, { embeds: [errorEmbed] }, true);
       return false;
     }
 
-    await this.deferReply(interaction, requireEphemeral);
+    // Check user permissions
+    if (requireUserPermissions.length > 0 && !this.checkUserPermissions(interaction, requireUserPermissions)) {
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Missing Permissions', 'You don\'t have the required permissions to use this command.')
+        .withStandardFooter(interaction.user);
+      await this.safeReply(interaction, { embeds: [errorEmbed] }, true);
+      return false;
+    }
+
+    // Try to defer reply, but don't fail if it doesn't work
+    const deferred = await this.deferReply(interaction, requireEphemeral);
+    if (!deferred) {
+      logger.warn(`Could not defer interaction ${interaction.id}, proceeding without defer`);
+    }
+    
     return true;
   },
 });
@@ -216,7 +277,10 @@ export async function handleCommandError(
 ): Promise<void> {
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   
-  if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('interaction has already been acknowledged')) {
+  // Only log actual errors, not Discord API quirks
+  if (!errorMessage.includes('Unknown interaction') && 
+      !errorMessage.includes('interaction has already been acknowledged') &&
+      !errorMessage.includes('Defer timeout')) {
     logger.error(`${commandName} error: ${errorMessage}`);
   }
 
@@ -230,6 +294,9 @@ export async function handleCommandError(
     if (msg.includes('Content not suitable for this channel')) {
       return { title: 'NSFW Content', description: MESSAGES.ERROR.NSFW_TAG_IN_SFW };
     }
+    if (msg.includes('Defer timeout') || msg.includes('Connect Timeout')) {
+      return { title: 'Connection Timeout', description: 'The request timed out. Please try again.' };
+    }
     return { title: 'Unexpected Error', description: MESSAGES.ERROR.GENERIC_ERROR };
   };
 
@@ -238,17 +305,10 @@ export async function handleCommandError(
     .withError(title, description)
     .withStandardFooter(interaction.user);
 
-  try {
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ embeds: [errorEmbed] });
-    } else {
-      await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-    }
-  } catch (replyError) {
-    const replyErrorMessage = (replyError as Error).message;
-    if (!replyErrorMessage.includes('Unknown interaction') && !replyErrorMessage.includes('interaction has already been acknowledged')) {
-      logger.error(`Failed to send error reply: ${replyErrorMessage}`);
-    }
+  // Use the safe reply method
+  const success = await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] }, true);
+  if (!success) {
+    logger.warn(`Could not send error response for ${commandName}`);
   }
 }
 

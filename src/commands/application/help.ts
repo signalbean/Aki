@@ -169,10 +169,12 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       )
       .withStandardFooter(interaction.user);
 
-    const response = await interaction.editReply({
+    await InteractionUtils.safeReply(interaction, {
       embeds: [embed],
       components: [selectMenu],
     });
+    
+    const response = await interaction.fetchReply();
 
     const collector = response.createMessageComponentCollector({
       componentType: ComponentType.StringSelect,

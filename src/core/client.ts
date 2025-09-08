@@ -80,28 +80,47 @@ export class BotClient {
         const command = this.commands.get(interaction.commandName);
         const handler = command?.execute ?? handleCustomTag;
         
-        await handler(interaction).catch((err) =>
-          handleCommandError(interaction, interaction.commandName, err)
-        );
+        // Add timeout protection for command execution
+        await Promise.race([
+          handler(interaction),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Command execution timeout')), 12000)
+          )
+        ]).catch((err) => handleCommandError(interaction, interaction.commandName, err));
       }
       else if (interaction.isMessageContextMenuCommand()) {
         const command = this.contextCommands.get(interaction.commandName);
         if (command) {
-          await command.execute(interaction).catch((err) =>
-            handleCommandError(interaction, interaction.commandName, err)
-          );
+          await Promise.race([
+            command.execute(interaction),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Command execution timeout')), 12000)
+            )
+          ]).catch((err) => handleCommandError(interaction, interaction.commandName, err));
         }
       }
       else if (interaction.isAutocomplete()) {
         const command = this.commands.get(interaction.commandName);
         if (command?.autocomplete) {
-          await command.autocomplete(interaction).catch((err) =>
-            logger.error(`Autocomplete error for ${interaction.commandName}: ${(err as Error).message}`)
-          );
+          // Shorter timeout for autocomplete
+          await Promise.race([
+            command.autocomplete(interaction),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Autocomplete timeout')), 2000)
+            )
+          ]).catch((err) => {
+            const errorMessage = (err as Error).message;
+            if (!errorMessage.includes('Unknown interaction')) {
+              logger.error(`Autocomplete error for ${interaction.commandName}: ${errorMessage}`);
+            }
+          });
         }
       }
     } catch (err) {
-      logger.error(`Unhandled interaction error: ${(err as Error).message}`);
+      const errorMessage = (err as Error).message;
+      if (!errorMessage.includes('Unknown interaction')) {
+        logger.error(`Unhandled interaction error: ${errorMessage}`);
+      }
     }
   }
 

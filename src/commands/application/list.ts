@@ -45,7 +45,8 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         })
         .withStandardFooter(interaction.user);
 
-      return void await interaction.editReply({ embeds: [emptyEmbed] });
+      await InteractionUtils.safeReply(interaction, { embeds: [emptyEmbed] });
+      return;
     }
 
     // Group commands by first letter for better organization
@@ -94,7 +95,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       inline: false
     }).withStandardFooter(interaction.user);
 
-    await interaction.editReply({ embeds: [embed] });
+    await InteractionUtils.safeReply(interaction, { embeds: [embed] });
   } catch (error) {
     await handleCommandError(interaction, 'list', error);
   }
