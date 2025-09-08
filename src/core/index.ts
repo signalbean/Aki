@@ -6,29 +6,29 @@ import { logger } from '@shared/utils';
 const bot = new BotClient();
 
 /**
- * Main entry point for the bot
+ * Main entry point - initializes and starts the Discord bot.
  */
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   try {
     await bot.start();
-  } catch (error: unknown) {
-    logger.error(`Failed to start bot: ${error instanceof Error ? error.message : String(error)}`);
+  } catch (error) {
+    logger.error(`Failed to start bot: ${(error as Error).message}`);
     process.exit(1);
   }
-}
+};
 
 /**
- * Graceful shutdown handler
+ * Shutdown handler - ensures proper cleanup of resources.
  */
-async function shutdown(): Promise<void> {
+const shutdown = async (): Promise<void> => {
   logger.log('Shutting down bot...');
   await bot.stop();
   process.exit(0);
-}
+};
 
 // Error handling
-process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-  logger.error(`Unhandled rejection at: ${promise}, reason: ${String(reason)}`);
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error(`Unhandled rejection: ${String(reason)}`);
 });
 
 process.on('uncaughtException', (error: Error) => {

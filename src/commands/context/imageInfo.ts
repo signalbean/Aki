@@ -19,7 +19,7 @@ export const data = new ContextMenuCommandBuilder()
   .setContexts([InteractionContextType.Guild]);
 
 export async function execute(interaction: MessageContextMenuCommandInteraction): Promise<void> {
-  await InteractionUtils.deferEphemeral(interaction);
+  await InteractionUtils.deferReply(interaction, true);
 
   try {
     const message = interaction.targetMessage;

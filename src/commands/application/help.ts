@@ -15,7 +15,7 @@ import { CONFIG, CustomEmbed, format } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
 import { CustomTagsService } from '@services/CustomTagsService';
 import { handleCommandError, InteractionUtils } from '@shared/utils';
-import { ChannelUtils } from '@services/ValidationService';
+import { ChannelUtils } from '@shared/utils';
 import { env } from '@shared/env';
 
 export const data = new SlashCommandBuilder()
@@ -147,7 +147,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   try {
     // NSFW channel check
-    const isNSFW = ChannelUtils.isNSFWChannel(interaction.channel);
+    const isNSFW = ChannelUtils.isNSFW(interaction.channel);
     const customTags = await CustomTagsService.getGuildTags(
       interaction.guild!.id,
       interaction.client.user.id,

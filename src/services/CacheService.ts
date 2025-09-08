@@ -3,25 +3,20 @@
 import { Collection } from 'discord.js';
 import { CONFIG } from '@shared/config';
 import { logger } from '@shared/utils';
-
-interface CacheItem<T> {
-  data: T;
-  timestamp: number;
-  ttl: number;
-}
+import { CacheItem } from '@shared/types';
 
 const caches = new Map<string, Collection<string, CacheItem<any>>>();
 const DEFAULT_TTL = CONFIG.API.RANDOM_IMAGE_CACHE_TTL_MS;
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
-function getCache<T>(name: string): Collection<string, CacheItem<T>> {
+const getCache = <T>(name: string): Collection<string, CacheItem<T>> => {
   if (!caches.has(name)) {
     caches.set(name, new Collection());
   }
   return caches.get(name)!;
-}
+};
 
-function cleanupAllCaches(): void {
+const cleanupAllCaches = (): void => {
   const now = Date.now();
   for (const [, cache] of caches) {
     for (const [key, item] of cache) {
@@ -30,9 +25,9 @@ function cleanupAllCaches(): void {
       }
     }
   }
-}
+};
 
-export const CacheService = {
+export const CacheService = Object.freeze({
   initialize(): void {
     if (cleanupInterval) return;
     cleanupInterval = setInterval(cleanupAllCaches, 300000); // 5 minutes
@@ -48,7 +43,7 @@ export const CacheService = {
   },
   
   set<T>(cacheName: string, key: string, data: T, ttl = DEFAULT_TTL): void {
-    getCache<T>(cacheName).set(key, { data, timestamp: Date.now(), ttl });
+    getCache<T>(cacheName).set(key, Object.freeze({ data, timestamp: Date.now(), ttl }));
   },
   
   get<T>(cacheName: string, key: string): T | null {
@@ -73,4 +68,4 @@ export const CacheService = {
     
     return stats;
   },
-};
+});

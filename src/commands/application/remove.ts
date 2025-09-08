@@ -4,11 +4,10 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   InteractionContextType,
-  PermissionFlagsBits,
-  AutocompleteInteraction
+  PermissionFlagsBits
 } from 'discord.js';
 import { CustomTagsService } from '@services/CustomTagsService';
-import { handleCommandError, InteractionUtils, logger } from '@shared/utils';
+import { handleCommandError, InteractionUtils } from '@shared/utils';
 import { CustomEmbed, format } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
 import { env } from '@shared/env';
@@ -89,52 +88,4 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   }
 }
 
-export async function autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-  if (!interaction.guild) return;
-
-  try {
-    if (!interaction.isAutocomplete()) {
-      return;
-    }
-
-    const focusedValue = interaction.options.getFocused().toLowerCase();
-    
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Autocomplete timeout')), 2000);
-    });
-
-    const tags = await Promise.race([
-      CustomTagsService.getGuildTags(
-        interaction.guild.id,
-        interaction.client.user.id,
-        env.TOKEN!
-      ),
-      timeoutPromise
-    ]);
-
-    const filtered = tags
-      .filter(tag => tag.name.toLowerCase().includes(focusedValue))
-      .map(tag => {
-        const targetTag = CustomTagsService.getTagFromCommand(tag);
-        return {
-          name: `${tag.name} → ${targetTag || 'unknown tag'}`,
-          value: tag.name
-        };
-      })
-      .slice(0, 25);
-    if (interaction.responded || !interaction.isAutocomplete()) {
-      return;
-    }
-
-    await interaction.respond(filtered);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('timeout')) {
-      logger.warn(`Autocomplete error for remove command: ${errorMessage}`);
-    }
-    
-    if (!interaction.responded) {
-      await interaction.respond([]).catch(() => {});
-    }
-  }
-}
+export { customCommandAutocomplete as autocomplete } from '@shared/autocomplete';

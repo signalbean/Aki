@@ -1,34 +1,43 @@
+// src/shared/utils.ts
+
 import { promises as fs, createWriteStream, existsSync, mkdirSync, WriteStream } from 'fs';
-import * as path from 'path';
+import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { ChatInputCommandInteraction, MessageContextMenuCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { 
+  ChatInputCommandInteraction, 
+  MessageContextMenuCommandInteraction, 
+  MessageFlags, 
+  PermissionFlagsBits,
+  Channel,
+  ChannelType
+} from 'discord.js';
 import { REGEX_PATTERNS, CustomEmbed, EmbedBuilders } from '@shared/config';
 import { MESSAGES } from '@shared/messages';
+import { InteractionType } from '@shared/types';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = process.cwd();
-const IS_PROD = __dirname.includes(path.sep + 'dist' + path.sep);
-const CODE_BASE_DIR = path.join(PROJECT_ROOT, IS_PROD ? 'dist' : 'src');
+const IS_PROD = __dirname.includes('/dist/');
+const CODE_BASE_DIR = join(PROJECT_ROOT, IS_PROD ? 'dist' : 'src');
 
-// Path utilities
-export const paths = {
-  assets: () => path.join(PROJECT_ROOT, 'assets'),
-  logs: () => path.join(PROJECT_ROOT, 'logs'),
-  commands: () => path.join(CODE_BASE_DIR, 'commands'),
-  applicationCommands: () => path.join(CODE_BASE_DIR, 'commands', 'application'),
-  contextCommands: () => path.join(CODE_BASE_DIR, 'commands', 'context'),
-  waifus: () => path.join(PROJECT_ROOT, 'assets', 'waifus.txt'),
-};
+// Consolidated path utilities
+export const paths = Object.freeze({
+  assets: () => join(PROJECT_ROOT, 'assets'),
+  logs: () => join(PROJECT_ROOT, 'logs'),
+  commands: () => join(CODE_BASE_DIR, 'commands'),
+  applicationCommands: () => join(CODE_BASE_DIR, 'commands', 'application'),
+  contextCommands: () => join(CODE_BASE_DIR, 'commands', 'context'),
+  waifus: () => join(PROJECT_ROOT, 'assets', 'waifus.txt'),
+});
 
-// File operations
-export const fileOps = {
+// Optimized file operations
+export const fileOps = Object.freeze({
   async readText(filePath: string): Promise<string | null> {
     try {
       return await fs.readFile(filePath, 'utf-8');
     } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
-      if (nodeError.code !== 'ENOENT') {
-        logger.error(`Failed to read text file ${filePath}: ${nodeError.message}`);
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.error(`Failed to read ${filePath}: ${(error as Error).message}`);
       }
       return null;
     }
@@ -37,24 +46,22 @@ export const fileOps = {
   async getDirFiles(dirPath: string): Promise<string[]> {
     try {
       const files = await fs.readdir(dirPath);
-      return files.filter(file => /\.(ts|js)$/i.test(file))
-                 .map(file => path.join(dirPath, file));
+      return files
+        .filter(file => /\.(ts|js)$/i.test(file))
+        .map(file => join(dirPath, file));
     } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
-      if (nodeError.code !== 'ENOENT') {
-        logger.error(`Failed to read directory ${dirPath}: ${nodeError.message}`);
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.error(`Failed to read directory ${dirPath}: ${(error as Error).message}`);
       }
       return [];
     }
   },
-};
+});
 
-// Logger
-type LogLevel = 'INFO' | 'ERROR' | 'WARN';
-
+// Optimized logger with better performance
 class Logger {
+  private readonly streams = new Map<string, WriteStream>();
   private readonly logsDir = paths.logs();
-  private streams = new Map<LogLevel, WriteStream>();
 
   constructor() {
     this.initializeLogger();
@@ -66,39 +73,31 @@ class Logger {
         mkdirSync(this.logsDir, { recursive: true });
       }
 
-      const logFiles: Record<LogLevel, string> = {
-        INFO: 'info.log',
-        ERROR: 'error.log',
-        WARN: 'warn.log',
-      };
+      const logFiles = { INFO: 'info.log', ERROR: 'error.log', WARN: 'warn.log' };
       
       for (const [level, file] of Object.entries(logFiles)) {
-        const stream = createWriteStream(path.join(this.logsDir, file), { flags: 'a' });
-        stream.on('error', (err) => console.error(`Logger stream error for ${level}:`, err));
-        this.streams.set(level as LogLevel, stream);
+        const stream = createWriteStream(join(this.logsDir, file), { flags: 'a' });
+        stream.on('error', (err) => console.error(`Logger error [${level}]:`, err));
+        this.streams.set(level, stream);
       }
     } catch (error) {
-      console.error('Failed to initialize logger:', error);
+      console.error('Logger initialization failed:', error);
     }
   }
 
-  public log(message: string, level: LogLevel = 'INFO'): void {
+  private writeLog(message: string, level: string): void {
     const timestamp = new Date().toISOString();
     const formatted = `[${timestamp}] ${level}: ${message}`;
-
-    const stream = this.streams.get(level);
-    if (stream) {
-      stream.write(formatted + '\n');
-    }
-
-    const consoleMethod = level.toLowerCase() as 'error' | 'warn' | 'log';
-    console[consoleMethod](formatted);
+    
+    this.streams.get(level)?.write(formatted + '\n');
+    console[level.toLowerCase() as 'log' | 'error' | 'warn'](formatted);
   }
 
-  public error(message: string): void { this.log(message, 'ERROR'); }
-  public warn(message: string): void { this.log(message, 'WARN'); }
+  log = (message: string): void => this.writeLog(message, 'INFO');
+  error = (message: string): void => this.writeLog(message, 'ERROR');
+  warn = (message: string): void => this.writeLog(message, 'WARN');
 
-  public destroy(): void {
+  destroy(): void {
     for (const stream of this.streams.values()) {
       stream.end();
     }
@@ -107,96 +106,80 @@ class Logger {
 
 export const logger = new Logger();
 
-type InteractionType = ChatInputCommandInteraction | MessageContextMenuCommandInteraction;
+// Channel utilities
+export const ChannelUtils = Object.freeze({
+  isNSFW: (channel: Channel | null): boolean => 
+    channel?.type === ChannelType.GuildText && (channel as any).nsfw === true,
+  
+  isDM: (channel: Channel | null): boolean => 
+    channel?.type === ChannelType.DM,
+});
 
-export const InteractionUtils = {
-  /**
-   * Check if interaction is in a guild context
-   */
-  checkGuildContext: (interaction: InteractionType) => {
-    return interaction.guild !== null;
-  },
+// Consolidated interaction utilities
+export const InteractionUtils = Object.freeze({
+  checkGuildContext: (interaction: InteractionType): boolean => 
+    interaction.guild !== null,
 
-  /**
-   * Check if the bot has required permissions in the channel
-   */
-  checkBotPermissions: (interaction: InteractionType, requiredPermissions: (keyof typeof PermissionFlagsBits)[] = ['ViewChannel']) => {
+  checkBotPermissions: (
+    interaction: InteractionType, 
+    permissions: (keyof typeof PermissionFlagsBits)[] = ['ViewChannel']
+  ): boolean => {
     const botMember = interaction.guild?.members.me;
     if (!botMember || !interaction.channel || !('permissionsFor' in interaction.channel)) {
       return false;
     }
-
     const botPermissions = interaction.channel.permissionsFor(botMember);
-    return requiredPermissions.every(permission => botPermissions?.has(PermissionFlagsBits[permission]));
+    return permissions.every(permission => botPermissions?.has(PermissionFlagsBits[permission]));
   },
 
-  /**
-   * Common defer patterns
-   */
-  deferReply: async (interaction: InteractionType, ephemeral = false) => {
-    if (interaction.deferred || interaction.replied) {
-      return;
-    }
-
+  async deferReply(interaction: InteractionType, ephemeral = false): Promise<void> {
+    if (interaction.deferred || interaction.replied) return;
+    
     try {
       await interaction.deferReply({ flags: ephemeral ? MessageFlags.Ephemeral : undefined });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error as Error).message;
       if (!errorMessage.includes('Unknown interaction')) {
         logger.warn(`Failed to defer reply: ${errorMessage}`);
       }
     }
   },
 
-  deferEphemeral: async (interaction: InteractionType) => {
-    await InteractionUtils.deferReply(interaction, true);
-  },
-
-  /**
-   * Permission and context validation
-   */
-  async validateContext(interaction: InteractionType, options: {
-    requireGuild?: boolean;
-    requirePermissions?: (keyof typeof PermissionFlagsBits)[];
-    requireEphemeral?: boolean;
-  } = {}): Promise<boolean> {
-    const {
-      requireGuild = true,
-      requirePermissions = ['ViewChannel'],
-      requireEphemeral = false
-    } = options;
+  async validateContext(
+    interaction: InteractionType, 
+    options: {
+      requireGuild?: boolean;
+      requirePermissions?: (keyof typeof PermissionFlagsBits)[];
+      requireEphemeral?: boolean;
+    } = {}
+  ): Promise<boolean> {
+    const { requireGuild = true, requirePermissions = ['ViewChannel'], requireEphemeral = false } = options;
 
     if (requireGuild && !this.checkGuildContext(interaction)) {
-      const errorEmbed = EmbedBuilders.guildOnlyError(interaction.user as any);
+      const errorEmbed = EmbedBuilders.guildOnlyError(interaction.user);
       try {
         await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-      } catch {
-      }
+      } catch {}
       return false;
     }
 
     if (requirePermissions.length > 0 && !this.checkBotPermissions(interaction, requirePermissions)) {
       const errorEmbed = new CustomEmbed('error')
         .withError('Missing Permissions', MESSAGES.ERROR.BOT_MISSING_PERMISSIONS)
-        .withStandardFooter(interaction.user as any);
+        .withStandardFooter(interaction.user);
       try {
         await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
-      } catch {
-      }
+      } catch {}
       return false;
     }
 
-    if (requireEphemeral) {
-      await this.deferEphemeral(interaction);
-    } else {
-      await this.deferReply(interaction);
-    }
-
+    await this.deferReply(interaction, requireEphemeral);
     return true;
   },
-};
+});
 
-export const utils = {
+// Utility functions
+export const utils = Object.freeze({
   findImageInMessage: (message: { content: string; embeds?: any[]; attachments?: any }) => {
     const sources = [
       message.content,
@@ -209,22 +192,23 @@ export const utils = {
       if (urlMatch) {
         const url = urlMatch[0];
         const idMatch = url.match(REGEX_PATTERNS.ID_FROM_URL);
-        return { url: url.split('?')[0], id: idMatch ? idMatch[1] : null };
+        return { url: url.split('?')[0], id: idMatch?.[1] || null };
       }
     }
 
-    if (message.attachments && message.attachments.size > 0) {
+    if (message.attachments?.size > 0) {
       const attachment = message.attachments.first();
       if (attachment?.url) {
         const idMatch = attachment.url.match(REGEX_PATTERNS.ID_FROM_URL);
-        return { url: attachment.url.split('?')[0], id: idMatch ? idMatch[1] : null };
+        return { url: attachment.url.split('?')[0], id: idMatch?.[1] || null };
       }
     }
 
     return { url: null, id: null };
   },
-};
+});
 
+// Error handler
 export async function handleCommandError(
   interaction: InteractionType,
   commandName: string,
@@ -233,26 +217,26 @@ export async function handleCommandError(
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   
   if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('interaction has already been acknowledged')) {
-    logger.error(`${commandName} command error: ${errorMessage}`);
+    logger.error(`${commandName} error: ${errorMessage}`);
   }
 
-  let errorTitle: string = 'Unexpected Error';
-  let errorDescription: string = MESSAGES.ERROR.GENERIC_ERROR;
+  const getErrorInfo = (msg: string) => {
+    if (msg.includes('API server error') || msg.includes('server error')) {
+      return { title: 'API Server Error', description: MESSAGES.ERROR.API_SERVER_ERROR };
+    }
+    if (msg.includes('Rate limit') || msg.includes('Too many requests')) {
+      return { title: 'Rate Limited', description: MESSAGES.ERROR.RATE_LIMIT };
+    }
+    if (msg.includes('Content not suitable for this channel')) {
+      return { title: 'NSFW Content', description: MESSAGES.ERROR.NSFW_TAG_IN_SFW };
+    }
+    return { title: 'Unexpected Error', description: MESSAGES.ERROR.GENERIC_ERROR };
+  };
 
-  if (errorMessage.includes('API server error (500)') || errorMessage.includes('server error')) {
-    errorTitle = 'API Server Error';
-    errorDescription = MESSAGES.ERROR.API_SERVER_ERROR;
-  } else if (errorMessage.includes('Rate limit') || errorMessage.includes('Too many requests')) {
-    errorTitle = 'Rate Limited';
-    errorDescription = MESSAGES.ERROR.RATE_LIMIT;
-  } else if (errorMessage.includes('Content not suitable for this channel')) {
-    errorTitle = 'NSFW Content';
-    errorDescription = MESSAGES.ERROR.NSFW_TAG_IN_SFW;
-  }
-  
+  const { title, description } = getErrorInfo(errorMessage);
   const errorEmbed = new CustomEmbed('error')
-    .withError(errorTitle, errorDescription)
-    .withStandardFooter(interaction.user as any);
+    .withError(title, description)
+    .withStandardFooter(interaction.user);
 
   try {
     if (interaction.deferred || interaction.replied) {
@@ -261,7 +245,7 @@ export async function handleCommandError(
       await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
     }
   } catch (replyError) {
-    const replyErrorMessage = replyError instanceof Error ? replyError.message : 'Unknown reply error';
+    const replyErrorMessage = (replyError as Error).message;
     if (!replyErrorMessage.includes('Unknown interaction') && !replyErrorMessage.includes('interaction has already been acknowledged')) {
       logger.error(`Failed to send error reply: ${replyErrorMessage}`);
     }

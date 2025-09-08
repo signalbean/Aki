@@ -3,6 +3,7 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { logger } from '@shared/utils';
+import { Environment } from '@shared/types';
 
 /**
  * Loads environment variables from a .env file into process.env.
@@ -44,12 +45,6 @@ const missing = REQUIRED_ENV.filter(key => !process.env[key]);
 if (missing.length > 0) {
   logger.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
   process.exit(1);
-}
-
-interface Environment {
-  TOKEN: string;
-  CLIENT_ID: string;
-  GUILD_ID?: string | undefined;
 }
 
 export const env: Environment = {
