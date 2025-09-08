@@ -44,10 +44,10 @@
 5. **Start the bot**
 
    ```bash
-   npm start
+   npm run start
    ```
 
-Or for development:
+6. **Start in dev**
 
    ```bash
    npm run dev
