@@ -47,6 +47,12 @@
    npm start
    ```
 
+Or for development:
+
+   ```bash
+   npm run dev
+   ```
+
 > \[!NOTE]
 > Commands may take a few minutes to appear globally. Use a `GUILD_ID` during development for faster testing in a single server.
 
