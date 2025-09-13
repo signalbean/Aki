@@ -67,8 +67,7 @@ export class BotClient {
       intents: [
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.GuildMessages
       ],
       partials: [Partials.Channel],
     });
@@ -131,7 +130,7 @@ export class BotClient {
               setTimeout(() => reject(new Error('Autocomplete timeout')), 2000)
             )
           ]).catch(() => {
-            // Silently handle all autocomplete errors - they're expected and normal
+            // Silently handle all autocomplete errors
             // Try to respond with empty array if possible
             if (!interaction.responded && interaction.isAutocomplete()) {
               interaction.respond([]).catch(() => {});
