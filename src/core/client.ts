@@ -76,7 +76,13 @@ export class BotClient {
 
   private async handleInteraction(interaction: Interaction): Promise<void> {
     try {
+      // Early validation - check if interaction is valid
+      if (!interaction) return;
+
       if (interaction.isChatInputCommand()) {
+        // Check if interaction is still valid before processing
+        if (!interaction.isRepliable()) return;
+
         const command = this.commands.get(interaction.commandName);
         const handler = command?.execute ?? handleCustomTag;
         
@@ -86,9 +92,17 @@ export class BotClient {
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Command execution timeout')), 12000)
           )
-        ]).catch((err) => handleCommandError(interaction, interaction.commandName, err));
+        ]).catch((err) => {
+          // Only handle error if interaction is still valid
+          if (interaction.isRepliable()) {
+            handleCommandError(interaction, interaction.commandName, err);
+          }
+        });
       }
       else if (interaction.isMessageContextMenuCommand()) {
+        // Check if interaction is still valid before processing
+        if (!interaction.isRepliable()) return;
+
         const command = this.contextCommands.get(interaction.commandName);
         if (command) {
           await Promise.race([
@@ -96,29 +110,41 @@ export class BotClient {
             new Promise((_, reject) => 
               setTimeout(() => reject(new Error('Command execution timeout')), 12000)
             )
-          ]).catch((err) => handleCommandError(interaction, interaction.commandName, err));
+          ]).catch((err) => {
+            // Only handle error if interaction is still valid
+            if (interaction.isRepliable()) {
+              handleCommandError(interaction, interaction.commandName, err);
+            }
+          });
         }
       }
       else if (interaction.isAutocomplete()) {
+        // Check if interaction is still valid before processing
+        if (!interaction.isAutocomplete()) return;
+
         const command = this.commands.get(interaction.commandName);
         if (command?.autocomplete) {
-          // Shorter timeout for autocomplete
+          // Shorter timeout for autocomplete with silent error handling
           await Promise.race([
             command.autocomplete(interaction),
             new Promise((_, reject) => 
               setTimeout(() => reject(new Error('Autocomplete timeout')), 2000)
             )
-          ]).catch((err) => {
-            const errorMessage = (err as Error).message;
-            if (!errorMessage.includes('Unknown interaction')) {
-              logger.error(`Autocomplete error for ${interaction.commandName}: ${errorMessage}`);
+          ]).catch(() => {
+            // Silently handle all autocomplete errors - they're expected and normal
+            // Try to respond with empty array if possible
+            if (!interaction.responded && interaction.isAutocomplete()) {
+              interaction.respond([]).catch(() => {});
             }
           });
         }
       }
     } catch (err) {
+      // Silently handle interaction errors that are expected
       const errorMessage = (err as Error).message;
-      if (!errorMessage.includes('Unknown interaction')) {
+      if (!errorMessage.includes('Unknown interaction') &&
+          !errorMessage.includes('Autocomplete timeout') &&
+          !errorMessage.includes('Command execution timeout')) {
         logger.error(`Unhandled interaction error: ${errorMessage}`);
       }
     }
