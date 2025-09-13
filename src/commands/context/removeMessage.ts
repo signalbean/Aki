@@ -51,16 +51,29 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
       return;
     }
 
-    await message.delete();
-    await interaction.deleteReply();
-  } catch (error) {
     try {
+      await message.delete();
+      // Only try to delete reply if interaction is still valid
+      if (interaction.isRepliable()) {
+        await interaction.deleteReply().catch(() => {});
+      }
+    } catch (deleteError) {
       const errorEmbed = new CustomEmbed('error')
-        .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
+        .withError('Delete Failed', 'Unable to delete the message. It may have already been removed.')
         .withStandardFooter(interaction.user);
       await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+    }
+  } catch (error) {
+    try {
+      // Only try to respond if interaction is still valid
+      if (interaction.isRepliable()) {
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
+          .withStandardFooter(interaction.user);
+        await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      }
     } catch {
-      // Ignore
+      // Silently ignore if we can't respond
     }
   }
 }

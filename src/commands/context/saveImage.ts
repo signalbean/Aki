@@ -46,8 +46,11 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
 
     try {
       await interaction.user.send({ content: imageUrl });
-      await interaction.deleteReply();
-    } catch {
+      // Only try to delete reply if interaction is still valid
+      if (interaction.isRepliable()) {
+        await interaction.deleteReply().catch(() => {});
+      }
+    } catch (dmError) {
       const errorEmbed = new CustomEmbed('error')
         .withError('DM Failed', MESSAGES.ERROR.DM_FAILED)
         .withStandardFooter(interaction.user);
@@ -55,12 +58,15 @@ export async function execute(interaction: MessageContextMenuCommandInteraction)
     }
   } catch (error) {
     try {
-      const errorEmbed = new CustomEmbed('error')
-        .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
-        .withStandardFooter(interaction.user);
-      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      // Only try to respond if interaction is still valid
+      if (interaction.isRepliable()) {
+        const errorEmbed = new CustomEmbed('error')
+          .withError('Unexpected Error', MESSAGES.ERROR.GENERIC_ERROR)
+          .withStandardFooter(interaction.user);
+        await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      }
     } catch {
-      // Ignore
+      // Silently ignore if we can't respond
     }
   }
 }
