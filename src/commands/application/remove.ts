@@ -34,11 +34,20 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   try {
     const name = interaction.options.getString('name', true).toLowerCase();
 
-    const existingTags = await CustomTagsService.getGuildTags(
-      interaction.guild!.id,
-      interaction.client.user.id,
-      env.TOKEN
-    );
+    let existingTags;
+    try {
+      existingTags = await CustomTagsService.getGuildTags(
+        interaction.guild!.id,
+        interaction.client.user.id,
+        env.TOKEN
+      );
+    } catch (error) {
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Service Error', 'Failed to fetch existing commands. Please try again later.')
+        .withStandardFooter(interaction.user);
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
+    }
 
     const commandToRemove = existingTags.find(cmd => cmd.name === name);
     if (!commandToRemove) {

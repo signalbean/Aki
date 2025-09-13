@@ -25,11 +25,20 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
   if (!isValid) return;
 
   try {
-    const tags: ApplicationCommand[] = await CustomTagsService.getGuildTags(
-      interaction.guild!.id,
-      interaction.client.user.id,
-      env.TOKEN
-    );
+    let tags: ApplicationCommand[];
+    try {
+      tags = await CustomTagsService.getGuildTags(
+        interaction.guild!.id,
+        interaction.client.user.id,
+        env.TOKEN
+      );
+    } catch (error) {
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Service Error', 'Failed to fetch custom commands. Please try again later.')
+        .withStandardFooter(interaction.user);
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
+    }
 
     if (tags.length === 0) {
       const emptyEmbed = new CustomEmbed('warning')
