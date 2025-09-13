@@ -99,13 +99,10 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
         .setTitle('🖱️ Context Menu Actions')
         .setDescription('Right-click any bot image message to access these quick actions:')
         .addFields(
-          { name: '📊 Information', value: format.bullet([
+          { name: '📊 Information & Actions', value: format.bullet([
             `${format.bold('Info')} - View post details and stats`,
             `${format.bold('Tags')} - Display all image tags`,
-          ])},
-          { name: '💾 Actions', value: format.bullet([
             `${format.bold('Save')} - DM the image to yourself`,
-            `${format.bold('Remove')} - Delete the bot message`,
           ])}
         );
 
