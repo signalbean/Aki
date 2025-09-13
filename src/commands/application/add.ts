@@ -65,11 +65,20 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
       return;
     }
 
-    const existingTags = await CustomTagsService.getGuildTags(
-      interaction.guild!.id,
-      interaction.client.user.id,
-      env.TOKEN
-    );
+    let existingTags;
+    try {
+      existingTags = await CustomTagsService.getGuildTags(
+        interaction.guild!.id,
+        interaction.client.user.id,
+        env.TOKEN
+      );
+    } catch (error) {
+      const errorEmbed = new CustomEmbed('error')
+        .withError('Service Error', 'Failed to check existing commands. Please try again later.')
+        .withStandardFooter(interaction.user);
+      await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] });
+      return;
+    }
 
     if (existingTags.length >= CONFIG.BOT.MAX_CUSTOM_TAGS) {
       const errorEmbed = new CustomEmbed('warning')

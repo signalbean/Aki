@@ -47,7 +47,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           { name: '🖼️ Image Commands', value: format.bullet([
             `${format.inlineCode('/fetch')} - Fetches a random image (optionally filter by rating)`,
             `${format.inlineCode('/search')} - Search Danbooru with tags`,
-            `${format.inlineCode('/post')} - Fetch a post by ID`,
+            `${format.inlineCode('/post')} - Fetch a post by its ID`,
             `${format.inlineCode('/waifu')} - Random waifu images`,
           ])},
           { name: '🏷️ Custom Tag Management', value: format.bullet([
@@ -132,7 +132,7 @@ const createEmbedForValue = (value: string, isNSFW: boolean, interaction: ChatIn
           { name: '🌐 Network', value: format.bullet([
             `Servers: ${interaction.client.guilds.cache.size}`,
             `Users: ${interaction.client.users.cache.size.toLocaleString()}`,
-            `Commands: ${customTagCount + 12} total`,
+            `Commands: ${customTagCount + 12} in total`,
           ]), inline: true },
         );
 
@@ -158,7 +158,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     const embed = new CustomEmbed()
       .setTitle('🎌 Welcome to Aki Bot')
       .setDescription(
-        `${format.bold('Your Premium Danbooru Experience')} • Fast, smart, and powerful.\n\n` +
+        `${format.bold('Your Best Danbooru Experience')} • Fast, smart, and powerful.\n\n` +
         format.codeBlock(
           '✨ Smart Content Filtering  🎯 Advanced Rating Control\n' +
           '⚡ Custom Command System   🎨 Context Menu Actions\n' +

@@ -3,7 +3,6 @@
 import { AutocompleteInteraction } from 'discord.js';
 import { ApiService } from '@services/ApiService';
 import { CustomTagsService } from '@services/CustomTagsService';
-import { logger } from '@shared/utils';
 import { env } from '@shared/env';
 
 /**
@@ -23,14 +22,26 @@ const withTimeout = <T>(promise: Promise<T>, ms = 2000): Promise<T> => {
  */
 export const tagAutocomplete = async (interaction: AutocompleteInteraction): Promise<void> => {
   try {
+    // Early validation - check if interaction is still valid
+    if (!interaction || !interaction.isAutocomplete()) {
+      return;
+    }
+
     const focusedOption = interaction.options.getFocused(true);
     if (focusedOption.name !== 'tag') {
-      return void await interaction.respond([]);
+      // Silently respond with empty array if already possible
+      if (!interaction.responded) {
+        await interaction.respond([]).catch(() => {});
+      }
+      return;
     }
 
     const input = focusedOption.value.toString().trim();
     if (!input) {
-      return void await interaction.respond([]);
+      if (!interaction.responded) {
+        await interaction.respond([]).catch(() => {});
+      }
+      return;
     }
 
     const apiService = new ApiService();
@@ -41,16 +52,16 @@ export const tagAutocomplete = async (interaction: AutocompleteInteraction): Pro
       value: tag.name
     }));
 
-    if (!interaction.responded) {
-      await interaction.respond(choices);
+    // Only respond if interaction is still valid and not already responded
+    if (!interaction.responded && interaction.isAutocomplete()) {
+      await interaction.respond(choices).catch(() => {});
     }
   } catch (error) {
-    const errorMessage = (error as Error).message;
-    if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('timeout')) {
-      logger.warn(`Tag autocomplete error: ${errorMessage}`);
-    }
-
-    if (!interaction.responded) {
+    // Silently handle all autocomplete errors as they're expected
+    // Don't log autocomplete timeouts or interaction errors as they're normal
+    
+    // Try to respond with empty array if possible
+    if (!interaction.responded && interaction.isAutocomplete()) {
       await interaction.respond([]).catch(() => {});
     }
   }
@@ -61,9 +72,19 @@ export const tagAutocomplete = async (interaction: AutocompleteInteraction): Pro
  * Shows existing custom commands in the current server with their associated tags.
  */
 export const customCommandAutocomplete = async (interaction: AutocompleteInteraction): Promise<void> => {
-  if (!interaction.guild) return;
+  if (!interaction.guild) {
+    if (!interaction.responded && interaction.isAutocomplete()) {
+      await interaction.respond([]).catch(() => {});
+    }
+    return;
+  }
 
   try {
+    // Early validation - check if interaction is still valid
+    if (!interaction || !interaction.isAutocomplete()) {
+      return;
+    }
+
     const focusedValue = interaction.options.getFocused().toLowerCase();
     
     const tags = await withTimeout(
@@ -85,16 +106,16 @@ export const customCommandAutocomplete = async (interaction: AutocompleteInterac
       })
       .slice(0, 25);
 
-    if (!interaction.responded) {
-      await interaction.respond(filtered);
+    // Only respond if interaction is still valid and not already responded
+    if (!interaction.responded && interaction.isAutocomplete()) {
+      await interaction.respond(filtered).catch(() => {});
     }
   } catch (error) {
-    const errorMessage = (error as Error).message;
-    if (!errorMessage.includes('Unknown interaction') && !errorMessage.includes('timeout')) {
-      logger.warn(`Custom command autocomplete error: ${errorMessage}`);
-    }
+    // Silently handle all autocomplete errors as they're expected
+    // Don't log autocomplete timeouts or interaction errors as they're normal
     
-    if (!interaction.responded) {
+    // Try to respond with empty array if possible
+    if (!interaction.responded && interaction.isAutocomplete()) {
       await interaction.respond([]).catch(() => {});
     }
   }

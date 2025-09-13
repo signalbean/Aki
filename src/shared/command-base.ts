@@ -85,6 +85,15 @@ export async function executeImageCommand(
           });
           return;
         }
+        if (error.status >= 500) {
+          const errorEmbed = new CustomEmbed("error")
+            .withError("API Server Error", MESSAGES.ERROR.API_SERVER_ERROR)
+            .withStandardFooter(interaction.user);
+          await InteractionUtils.safeReply(interaction, {
+            embeds: [errorEmbed],
+          });
+          return;
+        }
       }
       throw error;
     }
