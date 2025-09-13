@@ -147,6 +147,11 @@ export const InteractionUtils = Object.freeze({
     ephemeral = false
   ): Promise<boolean> {
     try {
+      // Check if interaction is still valid
+      if (!interaction || !interaction.isRepliable()) {
+        return false;
+      }
+
       const options = {
         ...content,
         flags: ephemeral ? MessageFlags.Ephemeral : undefined
@@ -162,16 +167,23 @@ export const InteractionUtils = Object.freeze({
       return true;
     } catch (error) {
       const errorMessage = (error as Error).message;
-      if (!errorMessage.includes('Unknown interaction') && 
-          !errorMessage.includes('interaction has already been acknowledged')) {
-        logger.warn(`Failed to send reply: ${errorMessage}`);
+      // Silently ignore expected Discord.js interaction errors
+      if (errorMessage.includes('Unknown interaction') || 
+          errorMessage.includes('interaction has already been acknowledged') ||
+          errorMessage.includes('The reply to this interaction has already been sent') ||
+          errorMessage.includes('Invalid interaction application command')) {
+        return false;
       }
+      logger.warn(`Failed to send reply: ${errorMessage}`);
       return false;
     }
   },
 
   async deferReply(interaction: InteractionType, ephemeral = false): Promise<boolean> {
-    if (interaction.deferred || interaction.replied) return true;
+    // Don't try to defer if already handled
+    if (!interaction.isRepliable() || interaction.deferred || interaction.replied) {
+      return true;
+    }
     
     try {
       await Promise.race([
@@ -181,9 +193,13 @@ export const InteractionUtils = Object.freeze({
       return true;
     } catch (error) {
       const errorMessage = (error as Error).message;
-      if (!errorMessage.includes('Unknown interaction')) {
-        logger.warn(`Failed to defer reply: ${errorMessage}`);
+      // Silently ignore expected Discord.js interaction errors
+      if (errorMessage.includes('Unknown interaction') || 
+          errorMessage.includes('interaction has already been acknowledged') ||
+          errorMessage.includes('Defer timeout')) {
+        return false;
       }
+      logger.warn(`Failed to defer reply: ${errorMessage}`);
       return false;
     }
   },
@@ -203,6 +219,11 @@ export const InteractionUtils = Object.freeze({
       requireUserPermissions = [],
       requireEphemeral = false 
     } = options;
+
+    // Early validation - check if interaction is still valid
+    if (!interaction || !interaction.isRepliable()) {
+      return false;
+    }
 
     // Check guild context first
     if (requireGuild && !this.checkGuildContext(interaction)) {
@@ -229,10 +250,9 @@ export const InteractionUtils = Object.freeze({
       return false;
     }
 
-    // Try to defer reply, but don't fail if it doesn't work
-    const deferred = await this.deferReply(interaction, requireEphemeral);
-    if (!deferred) {
-      logger.warn(`Could not defer interaction ${interaction.id}, proceeding without defer`);
+    // Try to defer reply only if needed, but don't fail validation if it doesn't work
+    if (!interaction.deferred && !interaction.replied) {
+      await this.deferReply(interaction, requireEphemeral);
     }
     
     return true;
@@ -277,11 +297,19 @@ export async function handleCommandError(
 ): Promise<void> {
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
   
-  // Only log actual errors, not Discord API quirks
+  // Only log actual errors, not Discord API quirks or expected timeouts
   if (!errorMessage.includes('Unknown interaction') && 
       !errorMessage.includes('interaction has already been acknowledged') &&
-      !errorMessage.includes('Defer timeout')) {
+      !errorMessage.includes('Defer timeout') &&
+      !errorMessage.includes('The reply to this interaction has already been sent') &&
+      !errorMessage.includes('Autocomplete timeout') &&
+      !errorMessage.includes('Command execution timeout')) {
     logger.error(`${commandName} error: ${errorMessage}`);
+  }
+
+  // Don't try to respond if the interaction is invalid
+  if (!interaction || !interaction.isRepliable()) {
+    return;
   }
 
   const getErrorInfo = (msg: string) => {
@@ -294,7 +322,7 @@ export async function handleCommandError(
     if (msg.includes('Content not suitable for this channel')) {
       return { title: 'NSFW Content', description: MESSAGES.ERROR.NSFW_TAG_IN_SFW };
     }
-    if (msg.includes('Defer timeout') || msg.includes('Connect Timeout')) {
+    if (msg.includes('timeout') || msg.includes('Connect Timeout')) {
       return { title: 'Connection Timeout', description: 'The request timed out. Please try again.' };
     }
     return { title: 'Unexpected Error', description: MESSAGES.ERROR.GENERIC_ERROR };
@@ -305,11 +333,8 @@ export async function handleCommandError(
     .withError(title, description)
     .withStandardFooter(interaction.user);
 
-  // Use the safe reply method
-  const success = await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] }, true);
-  if (!success) {
-    logger.warn(`Could not send error response for ${commandName}`);
-  }
+  // Use the safe reply method - don't log if it fails as it's likely due to interaction being invalid
+  await InteractionUtils.safeReply(interaction, { embeds: [errorEmbed] }, true);
 }
 
 process.on('exit', () => logger.destroy());
