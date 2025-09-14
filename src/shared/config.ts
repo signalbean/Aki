@@ -21,7 +21,6 @@ export const CONFIG = {
     RANDOM_IMAGE_CACHE_TTL_MS: 60000,
   },
   BOT: {
-    PREFIX: 'a!',
     MAX_USER_TAGS: 1,
     DEFAULT_RATING_SFW: 'g' as const,
     DEFAULT_RATING_NSFW: 'e' as const,
