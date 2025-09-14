@@ -1,6 +1,6 @@
 // src/scripts/manage-commands.ts
 
-import { REST } from '@discordjs/rest';
+import { REST } from 'discord.js';
 import { Routes } from 'discord-api-types/v10';
 import { readdir } from 'fs/promises';
 import { join } from 'path';
