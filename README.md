@@ -96,16 +96,6 @@ Options if you want aliases:
 
 ---
 
-## 🤝 Contributing
-
-Issues and PRs are welcome! If proposing a major change, open an issue first.
-
-* Keep PRs focused.
-* Add tests or at least a reproducible case.
-* Be kind - we’re here for anime pics *and* clean code.
-
----
-
 ## 📜 License
 
 Licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
