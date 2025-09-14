@@ -27,7 +27,7 @@ const getRest = (token: string): REST => {
 const createTagCommand = (name: string, tag: string, description?: string | null) => {
   const builder = new SlashCommandBuilder()
     .setName(name.toLowerCase())
-    .setDescription(`${TAG_PREFIX} ${tag} • ${description || `Aki`}`.slice(0, 100));
+    .setDescription(`${TAG_PREFIX} ${tag} • ${description || `Meow`}`.slice(0, 100));
   
   builder.addStringOption(option =>
     option.setName('rating')

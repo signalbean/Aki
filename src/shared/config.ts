@@ -16,7 +16,7 @@ export const CONFIG = {
       POST_BY_ID: (id: string) => `/posts/${id}.json`,
     },
     TIMEOUT_MS: 15000,
-    USER_AGENT: 'Aki (Discord Bot)',
+    USER_AGENT: 'Discord Bot',
     RANDOM_IMAGE_CACHE_PROBABILITY: 0.3,
     RANDOM_IMAGE_CACHE_TTL_MS: 60000,
   },

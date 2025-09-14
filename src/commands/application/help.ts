@@ -20,7 +20,7 @@ import { env } from '@shared/env';
 
 export const data = new SlashCommandBuilder()
   .setName('help')
-  .setDescription('Get help using the Aki bot')
+  .setDescription('Get help using the bot')
   .setContexts([InteractionContextType.Guild]);
 
 const createSelectMenu = () => new ActionRowBuilder<StringSelectMenuBuilder>()
@@ -153,7 +153,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
     const selectMenu = createSelectMenu();
     const embed = new CustomEmbed()
-      .setTitle('🎌 Welcome to Aki Bot')
+      .setTitle('🎌 Welcome!')
       .setDescription(
         `${format.bold('Your Best Danbooru Experience')} • Fast, smart, and powerful.\n\n` +
         format.codeBlock(
@@ -161,8 +161,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
           '⚡ Custom Command System   🎨 Context Menu Actions\n' +
           '🔍 Intelligent Tag Search  🚀 High-Speed Performance'
         ) +
-        `\n**Server Status:** ${customTags.length}/${CONFIG.BOT.MAX_CUSTOM_TAGS} custom commands • ${isNSFW ? '🔞 NSFW Enabled' : '✅ SFW Mode'}\n\n` +
-        `🌐 **Source Code:** [Github Repo](https://github.com/signalbean/Aki)`
+        `\n**Server Status:** ${customTags.length}/${CONFIG.BOT.MAX_CUSTOM_TAGS} custom commands • ${isNSFW ? '🔞 NSFW Enabled' : '✅ SFW Mode'}`
       )
       .withStandardFooter(interaction.user);
 
